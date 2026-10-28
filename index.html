@@ -1,0 +1,952 @@
+<title>Wochenmix</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: zwei Spalten wie ein Sendeplan – links Eingabe (Schritt 1–3), rechts das Programm der Woche */
+:root {
+  --bg: #EBEFF1;
+  --surface: #FFFFFF;
+  --sunk: #DFE5E8;
+  --ink: #13212B;
+  --muted: #566874;
+  --line: #C9D2D7;
+  --accent: #0B746F;
+  --accent-ink: #FFFFFF;
+  --heat: #E39A2A;
+  --warn: #B4422F;
+  --ok: #2F7D3B;
+  --f-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1418; --surface: #161F25; --sunk: #0A0F12; --ink: #E3EBEE; --muted: #93A5AF;
+    --line: #2A3740; --accent: #3BC2B8; --accent-ink: #062321; --heat: #F2B04C; --warn: #F07A63; --ok: #6CCB7B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1418; --surface: #161F25; --sunk: #0A0F12; --ink: #E3EBEE; --muted: #93A5AF;
+  --line: #2A3740; --accent: #3BC2B8; --accent-ink: #062321; --heat: #F2B04C; --warn: #F07A63; --ok: #6CCB7B;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 22px; }
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; border-bottom: 3px solid var(--ink); padding-bottom: 12px; }
+.brand h1 { font-family: var(--f-display); font-weight: 800; font-size: clamp(44px, 8vw, 76px); line-height: .9; margin: 0; letter-spacing: .01em; text-transform: uppercase; }
+.brand p { margin: 6px 0 0; color: var(--muted); max-width: 56ch; }
+.weekstamp { font-family: var(--f-mono); text-align: right; font-size: 13px; color: var(--muted); }
+.weekstamp b { display: block; font-family: var(--f-display); font-size: 34px; color: var(--accent); line-height: 1; }
+.mode { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; font-family: var(--f-mono); padding: 3px 8px; border: 1px solid var(--line); border-radius: 99px; margin-top: 6px; }
+.mode i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: inline-block; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 22px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 12px; }
+.col { display: grid; gap: 16px; min-width: 0; }
+.step h2 { font-family: var(--f-display); font-size: 24px; text-transform: uppercase; margin: 0; display: flex; align-items: baseline; gap: 10px; letter-spacing: .02em; }
+.step h2 span { font-family: var(--f-mono); font-size: 12px; color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 0 6px; letter-spacing: 0; }
+.hint { color: var(--muted); font-size: 13px; margin: 0; }
+.hint code, .kbd { font-family: var(--f-mono); font-size: 12px; background: var(--sunk); padding: 1px 5px; border-radius: 3px; word-break: break-all; }
+
+.tabs { display: flex; gap: 4px; background: var(--sunk); padding: 4px; border-radius: 6px; }
+.tabs button { flex: 1; border: 0; background: transparent; color: var(--muted); font: 700 13px var(--f-body); padding: 7px 6px; border-radius: 4px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 0 var(--line); }
+.panel { display: grid; gap: 10px; }
+
+.drop { border: 2px dashed var(--line); border-radius: 6px; padding: 18px 12px; text-align: center; color: var(--muted); cursor: pointer; display: grid; gap: 4px; }
+.drop:hover, .drop.over { border-color: var(--accent); color: var(--ink); }
+.drop strong { color: var(--ink); }
+.thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.thumbs img { width: 54px; height: 96px; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); }
+
+label.field { display: grid; gap: 4px; font-size: 13px; font-weight: 700; }
+label.field small { font-weight: 400; color: var(--muted); }
+input[type="text"], input[type="password"], textarea, select {
+  width: 100%; font: 14px var(--f-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px;
+}
+textarea { font-family: var(--f-mono); font-size: 12.5px; line-height: 1.6; min-height: 190px; resize: vertical; }
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible, .drop:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); font: 700 14px var(--f-body); padding: 8px 14px; border-radius: 4px; cursor: pointer; text-decoration: none; }
+.btn:hover { background: var(--sunk); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.big { font-family: var(--f-display); font-size: 22px; text-transform: uppercase; letter-spacing: .03em; padding: 10px 16px; width: 100%; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.slider { display: grid; gap: 2px; }
+.slider .lab { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; }
+.slider .lab output { font-family: var(--f-mono); font-weight: 500; color: var(--accent); }
+.slider .ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); font-family: var(--f-mono); text-transform: uppercase; letter-spacing: .06em; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+.check input { margin-top: 3px; accent-color: var(--accent); }
+
+.note { font-size: 13px; padding: 10px 12px; border-left: 3px solid var(--heat); background: var(--sunk); border-radius: 0 4px 4px 0; }
+.note.err { border-left-color: var(--warn); }
+.note.good { border-left-color: var(--ok); }
+.status { font-family: var(--f-mono); font-size: 12px; color: var(--muted); min-height: 1.5em; }
+.log { font-family: var(--f-mono); font-size: 12px; color: var(--muted); display: grid; gap: 2px; max-height: 150px; overflow: auto; }
+.log div::before { content: "› "; color: var(--accent); }
+
+/* Ergebnis */
+.result { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+.res-head { padding: 16px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+.res-head h2 { font-family: var(--f-display); font-size: clamp(30px, 5vw, 44px); line-height: 1; margin: 0; text-transform: uppercase; text-wrap: balance; }
+.res-head .meta { font-family: var(--f-mono); font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.tag-example { font-family: var(--f-mono); font-size: 11px; background: var(--heat); color: #1d1405; padding: 2px 7px; border-radius: 3px; text-transform: uppercase; letter-spacing: .06em; width: max-content; }
+
+.profile { padding: 14px 16px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 22px; }
+.profile h3 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-family: var(--f-mono); font-weight: 500; }
+.stat b { font-family: var(--f-display); font-size: 30px; line-height: 1; display: block; }
+.stat span { font-size: 12px; color: var(--muted); }
+.bars { display: grid; gap: 5px; font-size: 12.5px; }
+.bar { display: grid; grid-template-columns: minmax(0, 1fr) 64px; gap: 8px; align-items: center; }
+.bar .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar .track { height: 6px; background: var(--sunk); border-radius: 3px; overflow: hidden; }
+.bar .track i { display: block; height: 100%; background: var(--accent); }
+.bar .v { grid-column: 1 / -1; display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 11px; color: var(--muted); margin-top: -3px; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { font-size: 12px; border: 1px solid var(--line); border-radius: 99px; padding: 1px 9px; }
+.profile p { margin: 0; font-size: 13.5px; }
+
+ol.tracks { list-style: none; margin: 0; padding: 0; counter-reset: t; }
+ol.tracks li { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); align-items: center; }
+ol.tracks li:last-child { border-bottom: 0; }
+.pos { font-family: var(--f-display); font-size: 26px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.t-main { min-width: 0; }
+.t-title { font-weight: 700; overflow-wrap: anywhere; }
+.t-artist { color: var(--muted); font-size: 13.5px; }
+.t-why { font-size: 12.5px; color: var(--muted); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.pill { font-family: var(--f-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; padding: 1px 6px; border-radius: 3px; border: 1px solid currentColor; }
+.pill.new { color: var(--accent); }
+.pill.known { color: var(--muted); }
+.pill.miss { color: var(--warn); }
+.t-side { display: grid; justify-items: end; gap: 4px; font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.meter { width: 70px; height: 6px; border-radius: 3px; background: var(--sunk); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--heat); }
+.t-side a { color: var(--accent); font-family: var(--f-body); font-size: 12.5px; font-weight: 700; text-decoration: none; }
+.t-side a:hover { text-decoration: underline; }
+@media (max-width: 520px) {
+  ol.tracks li { grid-template-columns: 30px minmax(0, 1fr); }
+  .t-side { grid-column: 2; justify-items: start; grid-auto-flow: column; align-items: center; gap: 10px; }
+  .pos { font-size: 22px; }
+}
+.res-actions { padding: 14px 16px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.empty { padding: 28px 16px; color: var(--muted); }
+details.help { font-size: 13px; }
+details.help summary { cursor: pointer; font-weight: 700; }
+details.help ol { padding-left: 20px; margin: 8px 0 0; display: grid; gap: 4px; }
+a { color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Wochenmix</h1>
+      <p>Liest deine Hörgewohnheiten aus einem Screenshot oder deinem Spotify-Konto, vergleicht Künstler-Hörerzahlen und ähnliche Songs und stellt daraus die Playlist für diese Woche zusammen.</p>
+      <div class="mode" id="modeBadge"><i></i><span id="modeText">Modus wird erkannt …</span></div>
+    </div>
+    <div class="weekstamp"><b id="kw">KW</b><span id="range"></span></div>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <!-- 1 Hördaten -->
+      <section class="step" aria-labelledby="s1">
+        <h2 id="s1"><span>1</span>Hördaten</h2>
+        <div class="tabs" role="tablist">
+          <button role="tab" id="tab-shot" aria-selected="true" data-panel="p-shot">Screenshot</button>
+          <button role="tab" id="tab-sp" aria-selected="false" data-panel="p-sp">Spotify-Konto</button>
+          <button role="tab" id="tab-man" aria-selected="false" data-panel="p-man">Von Hand</button>
+        </div>
+
+        <div class="panel" id="p-shot">
+          <div class="drop" id="drop" tabindex="0" role="button" aria-label="Screenshots auswählen">
+            <strong>Screenshots hier ablegen oder antippen</strong>
+            <span>„Zuletzt gehört“, Top-Songs, Wrapped oder eine Playlist – mehrere Bilder gehen auch.</span>
+          </div>
+          <input type="file" id="shotInput" accept="image/png,image/jpeg,image/webp" multiple hidden>
+          <div class="thumbs" id="thumbs"></div>
+          <div class="row"><button class="btn primary" id="readShots" disabled>Songs auslesen</button><span class="status" id="shotStatus"></span></div>
+          <p class="hint" id="shotHint"></p>
+        </div>
+
+        <div class="panel" id="p-sp" hidden>
+          <div id="spBlocked" class="note" hidden>Der Spotify-Login funktioniert nur in der selbst gehosteten Version dieser Seite. Hier im Claude-Viewer sperrt der Browser Verbindungen zu anderen Diensten. Die Datei dafür bekommst du im Chat, die Anleitung steht unten.</div>
+          <div id="spPanel" class="panel">
+            <label class="field">Spotify Client ID <small>aus dem Spotify Developer Dashboard</small>
+              <input type="text" id="clientId" autocomplete="off" spellcheck="false" placeholder="z. B. 3f2a…">
+            </label>
+            <p class="hint">Trage im Dashboard diese Redirect URI ein: <code id="redirectUri"></code></p>
+            <div class="row">
+              <button class="btn primary" id="spLogin">Mit Spotify verbinden</button>
+              <button class="btn" id="spLogout" hidden>Abmelden</button>
+            </div>
+            <div class="row" id="spLoaders" hidden>
+              <button class="btn" id="loadTop">Top-Songs (4 Wochen)</button>
+              <button class="btn" id="loadRecent">Zuletzt gehört (50)</button>
+            </div>
+            <span class="status" id="spStatus"></span>
+          </div>
+        </div>
+
+        <div class="panel" id="p-man" hidden>
+          <p class="hint">Schreib deine Songs direkt in die Liste unten.</p>
+        </div>
+
+        <label class="field">Deine Songs <small>Ein Song pro Zeile: Titel – Künstler. Weiter oben zählt mehr.</small>
+          <textarea id="seeds" spellcheck="false"></textarea>
+        </label>
+        <div class="row" style="justify-content:space-between"><span class="status" id="seedCount"></span><button class="btn" id="clearSeeds">Liste leeren</button></div>
+      </section>
+
+      <!-- 2 Einstellungen -->
+      <section class="step" aria-labelledby="s2">
+        <h2 id="s2"><span>2</span>Mischung</h2>
+        <label class="field" id="lfmField">Last.fm API-Key <small>kostenlos, liefert Ähnlichkeiten und Hörerzahlen</small>
+          <input type="password" id="lfmKey" autocomplete="off" spellcheck="false" placeholder="32 Zeichen">
+        </label>
+        <div class="slider">
+          <div class="lab"><label for="len">Länge</label><output id="lenOut">30 Songs</output></div>
+          <input type="range" id="len" min="15" max="50" step="5" value="30">
+        </div>
+        <div class="slider">
+          <div class="lab"><label for="disc">Entdecken</label><output id="discOut">60 % neue Künstler</output></div>
+          <input type="range" id="disc" min="0" max="100" step="10" value="60">
+          <div class="ends"><span>Vertraut</span><span>Neu</span></div>
+        </div>
+        <div class="slider">
+          <div class="lab"><label for="pop">Bekanntheit</label><output id="popOut">wie deine Künstler</output></div>
+          <input type="range" id="pop" min="0" max="100" step="10" value="50">
+          <div class="ends"><span>Nischiger</span><span>Bekannter</span></div>
+        </div>
+        <label class="field">Höchstens pro Künstler
+          <select id="maxPer"><option value="1">1 Song</option><option value="2" selected>2 Songs</option><option value="3">3 Songs</option></select>
+        </label>
+        <label class="check"><input type="checkbox" id="noRepeat" checked> Songs aus den Wochenmixes der letzten 4 Wochen weglassen</label>
+      </section>
+
+      <!-- 3 Erstellen -->
+      <section class="step" aria-labelledby="s3">
+        <h2 id="s3"><span>3</span>Erstellen</h2>
+        <button class="btn primary big" id="build">Wochenmix erstellen</button>
+        <div class="log" id="log" aria-live="polite"></div>
+      </section>
+    </div>
+
+    <!-- Ergebnis -->
+    <section class="result" id="result" aria-live="polite"></section>
+  </div>
+
+  <section class="step" aria-labelledby="s4">
+    <h2 id="s4"><span>?</span>Selbst hosten (für Spotify-Login)</h2>
+    <details class="help" open>
+      <summary>So bekommst du die volle Version mit Spotify-Konto</summary>
+      <ol>
+        <li>Lade diese Seite als <span class="kbd">wochenmix.html</span> herunter (Datei aus dem Chat) und stelle sie online, z. B. als <span class="kbd">index.html</span> in einem GitHub-Pages-Repository. Lokal geht es auch: im Ordner <span class="kbd">python3 -m http.server 8080 --bind 127.0.0.1</span> starten und <span class="kbd">http://127.0.0.1:8080/wochenmix.html</span> öffnen.</li>
+        <li>Auf developer.spotify.com/dashboard eine App anlegen, „Web API“ ankreuzen und als Redirect URI genau die Adresse der Seite eintragen (wird oben unter „Spotify-Konto“ angezeigt). Spotify verlangt dafür ein Premium-Konto.</li>
+        <li>Unter „User Management“ dein eigenes Spotify-Konto eintragen und die Client ID in die Seite kopieren.</li>
+        <li>Auf last.fm/api/account/create einen kostenlosen API-Key holen und unter „Mischung“ einfügen.</li>
+      </ol>
+    </details>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem("wm_" + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem("wm_" + k, JSON.stringify(v)); } catch {} },
+    del(k) { try { localStorage.removeItem("wm_" + k); } catch {} }
+  };
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  /* ---------- Umgebung ---------- */
+  const IN_CLAUDE = !!(window.claude && typeof window.claude.use === "function");
+  const STANDALONE = !IN_CLAUDE;
+  let sample = null, sampleImages = false;
+
+  /* ---------- Woche ---------- */
+  const now = new Date();
+  function isoWeek(d) {
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day);
+    const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+    return { year: t.getUTCFullYear(), week: Math.ceil(((t - y0) / 86400000 + 1) / 7) };
+  }
+  const W = isoWeek(now);
+  const mon = new Date(now); mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const fmtD = (d) => d.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" });
+  const WEEK_ID = `${W.year}-W${String(W.week).padStart(2, "0")}`;
+  const WEEK_LABEL = `KW ${W.week}`;
+  const RANGE = `${fmtD(mon)}–${fmtD(sun)}.${sun.getFullYear()}`;
+  $("kw").textContent = WEEK_LABEL; $("range").textContent = RANGE;
+
+  /* ---------- Tabs ---------- */
+  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach((x) => { x.setAttribute("aria-selected", x === b); $(x.dataset.panel).hidden = x !== b; });
+    store.set("tab", b.id);
+  }));
+  const lastTab = store.get("tab", null); if (lastTab && $(lastTab)) $(lastTab).click();
+
+  /* ---------- Songliste ---------- */
+  const EXAMPLE = [
+    "Blinding Lights – The Weeknd", "Heat Waves – Glass Animals", "Do I Wanna Know? – Arctic Monkeys",
+    "Feels Like We Only Go Backwards – Tame Impala", "Electric Feel – MGMT", "Midnight City – M83",
+    "Get Lucky – Daft Punk", "Little Dark Age – MGMT"
+  ].join("\n");
+  const seedsEl = $("seeds");
+  seedsEl.value = store.get("seeds", null) ?? EXAMPLE;
+  let seedsAreExample = seedsEl.value === EXAMPLE;
+
+  const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/\s*[\(\[](feat|ft|with|prod)[^\)\]]*[\)\]]/g, "").replace(/\s+-\s+(remaster|live|radio edit|single version|\d{4} remaster).*$/g, "")
+    .replace(/[^a-z0-9äöüß]+/g, " ").trim();
+  const keyOf = (title, artist) => norm(artist) + "|" + norm(title);
+
+  function parseSeeds() {
+    const lines = seedsEl.value.split("\n").map((l) => l.trim()).filter(Boolean);
+    const map = new Map();
+    lines.forEach((line, i) => {
+      let title = line, artist = "";
+      const m = line.split(/\s+[–—-]\s+|\t|\s+•\s+/);
+      if (m.length >= 2) { title = m[0].trim(); artist = m.slice(1).join(" ").trim(); }
+      else { const by = line.match(/^(.*)\s+(?:by|von)\s+(.*)$/i); if (by) { title = by[1]; artist = by[2]; } }
+      const w = 1 - 0.6 * (i / Math.max(1, lines.length));
+      const k = keyOf(title, artist);
+      if (map.has(k)) map.get(k).w += w; else map.set(k, { title, artist, w, key: k });
+    });
+    return [...map.values()];
+  }
+  function updateCount() {
+    const n = parseSeeds().length;
+    $("seedCount").textContent = seedsAreExample ? `${n} Beispiel-Songs – ersetze sie durch deine` : `${n} Songs`;
+  }
+  seedsEl.addEventListener("input", () => { seedsAreExample = false; store.set("seeds", seedsEl.value); updateCount(); });
+  $("clearSeeds").addEventListener("click", () => { seedsEl.value = ""; seedsAreExample = false; store.set("seeds", ""); updateCount(); seedsEl.focus(); });
+  function addSeedLines(lines, replace) {
+    const clean = lines.map((l) => l.trim()).filter(Boolean);
+    if (seedsAreExample || replace) seedsEl.value = clean.join("\n");
+    else seedsEl.value = (seedsEl.value.trim() ? seedsEl.value.trim() + "\n" : "") + clean.join("\n");
+    seedsAreExample = false; store.set("seeds", seedsEl.value); updateCount();
+  }
+  updateCount();
+
+  /* ---------- Einstellungen ---------- */
+  const lenEl = $("len"), discEl = $("disc"), popEl = $("pop");
+  const popWord = (v) => v < 25 ? "deutlich nischiger" : v < 45 ? "etwas nischiger" : v <= 55 ? "wie deine Künstler" : v <= 75 ? "etwas bekannter" : "deutlich bekannter";
+  function syncSliders() {
+    $("lenOut").textContent = `${lenEl.value} Songs`;
+    $("discOut").textContent = `${discEl.value} % neue Künstler`;
+    $("popOut").textContent = popWord(+popEl.value);
+    store.set("settings", { len: lenEl.value, disc: discEl.value, pop: popEl.value, maxPer: $("maxPer").value, noRepeat: $("noRepeat").checked });
+  }
+  const st = store.get("settings", null);
+  if (st) { lenEl.value = st.len; discEl.value = st.disc; popEl.value = st.pop; $("maxPer").value = st.maxPer; $("noRepeat").checked = st.noRepeat; }
+  [lenEl, discEl, popEl, $("maxPer"), $("noRepeat")].forEach((e) => e.addEventListener("input", syncSliders));
+  syncSliders();
+  $("lfmKey").value = store.get("lfmKey", "");
+  $("lfmKey").addEventListener("input", (e) => store.set("lfmKey", e.target.value.trim()));
+
+  /* ---------- Log ---------- */
+  const logEl = $("log");
+  const log = (msg) => { const d = document.createElement("div"); d.textContent = msg; logEl.append(d); logEl.scrollTop = logEl.scrollHeight; };
+  const clearLog = () => { logEl.textContent = ""; };
+
+  /* ---------- Screenshots ---------- */
+  let shots = [];
+  const drop = $("drop"), shotInput = $("shotInput");
+  drop.addEventListener("click", () => shotInput.click());
+  drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); shotInput.click(); } });
+  ["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", (e) => setShots([...e.dataTransfer.files].filter((f) => f.type.startsWith("image/"))));
+  shotInput.addEventListener("change", () => setShots([...shotInput.files]));
+  function setShots(files) {
+    shots = files.slice(0, 8);
+    const th = $("thumbs"); th.textContent = "";
+    shots.forEach((f) => { const img = document.createElement("img"); img.alt = f.name; img.src = URL.createObjectURL(f); th.append(img); });
+    $("readShots").disabled = !shots.length;
+    $("shotStatus").textContent = shots.length ? `${shots.length} Bild${shots.length > 1 ? "er" : ""} bereit` : "";
+  }
+
+  $("readShots").addEventListener("click", async () => {
+    if (!shots.length) return;
+    const btn = $("readShots"); btn.disabled = true;
+    const status = $("shotStatus");
+    try {
+      let lines = [];
+      if (IN_CLAUDE) {
+        if (!sample || !sampleImages) throw new Error("Bilder können in dieser Ansicht nicht an Claude gesendet werden. Schreib die Songs von Hand in die Liste.");
+        status.textContent = "Claude liest die Screenshots …";
+        const prompt = "Die Bilder sind Screenshots aus Spotify (z. B. Zuletzt gehört, Top-Songs, Wrapped, eine Playlist oder ein Künstlerprofil). " +
+          "Lies jeden Song heraus, der darauf zu sehen ist, in der Reihenfolge von oben nach unten und Bild für Bild. Ignoriere Bedienelemente, Werbung, Podcasts und Hörbücher. " +
+          "Wenn eine Zahl der Wiedergaben oder Minuten sichtbar ist, gib sie als plays an, sonst null. Wenn der Künstler nicht sichtbar ist, gib einen leeren String an. " +
+          'Antworte nur mit einem JSON-Array: [{"title": "…", "artist": "…", "plays": null}]';
+        const imgs = shots.slice(0, maxImages);
+        const res = await sample.json(prompt, { images: imgs, onText: () => { status.textContent = "Claude schreibt die Liste …"; } });
+        if (!Array.isArray(res)) throw new Error("Die Antwort enthielt keine Liste.");
+        const rows = res.filter((r) => r && r.title).map((r) => ({ t: String(r.title), a: String(r.artist || ""), p: Number(r.plays) || 0 }));
+        if (rows.some((r) => r.p)) rows.sort((x, y) => y.p - x.p);
+        lines = rows.map((r) => r.a ? `${r.t} – ${r.a}` : r.t);
+      } else {
+        status.textContent = "Texterkennung wird geladen …";
+        await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+        for (let i = 0; i < shots.length; i++) {
+          status.textContent = `Lese Bild ${i + 1} von ${shots.length} …`;
+          const { data } = await window.Tesseract.recognize(shots[i], "deu+eng");
+          lines.push(...parseOcr(data.text));
+        }
+      }
+      if (!lines.length) throw new Error("Auf den Bildern wurden keine Songs gefunden. Versuch einen schärferen Screenshot der Songliste.");
+      addSeedLines(lines);
+      status.textContent = `${lines.length} Songs übernommen – kurz prüfen`;
+    } catch (e) {
+      status.textContent = sampleErr(e);
+    } finally { btn.disabled = !shots.length; }
+  });
+  function loadScript(src) {
+    return new Promise((res, rej) => {
+      if ([...document.scripts].some((s) => s.src === src)) return res();
+      const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Die Texterkennung konnte nicht geladen werden. Prüfe die Internetverbindung."));
+      document.head.append(s);
+    });
+  }
+  function parseOcr(text) {
+    const noise = /^(zuletzt|recently|kürzlich|top|wiedergabe|playlist|songs?|home|start|suche|search|bibliothek|library|premium|abspielen|play|shuffle|zufall|folgen|follow|gespeichert|liked|lieblingssongs|alle|all|musik|music|podcasts?|heute|gestern|today|yesterday|mehr|more|\d+ (songs|titel|min))/i;
+    const lines = text.split("\n")
+      .map((l) => l.replace(/[|©®™]/g, " ").replace(/\s+/g, " ").trim())
+      .map((l) => l.replace(/^\d{1,3}[.)]?\s+/, "").replace(/\s+\d{1,2}:\d{2}$/, "").replace(/^[E€]\s+/, "").replace(/^(Song|Single|Album|EP)\s*[•·.]\s*/i, ""))
+      .filter((l) => l.length > 1 && !/^\d{1,2}:\d{2}$/.test(l) && !/^[\d\W]+$/.test(l) && !noise.test(l));
+    const out = [];
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      if (/\s[–—-]\s|\s•\s/.test(l)) { out.push(l.replace(/\s•\s/, " – ")); continue; }
+      if (i + 1 < lines.length && !/\s[–—-]\s|\s•\s/.test(lines[i + 1])) { out.push(`${l} – ${lines[i + 1]}`); i++; }
+      else out.push(l);
+    }
+    return out;
+  }
+
+  /* ---------- Spotify (PKCE) ---------- */
+  const SP = { auth: "https://accounts.spotify.com/authorize", token: "https://accounts.spotify.com/api/token", api: "https://api.spotify.com/v1" };
+  const SCOPES = "user-top-read user-read-recently-played playlist-modify-private playlist-modify-public";
+  const redirectUri = location.origin + location.pathname;
+  $("redirectUri").textContent = redirectUri;
+  $("clientId").value = store.get("clientId", "");
+  $("clientId").addEventListener("input", (e) => store.set("clientId", e.target.value.trim()));
+  let spToken = store.get("spToken", null);
+
+  const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  async function spLogin() {
+    const cid = $("clientId").value.trim();
+    if (!cid) { $("spStatus").textContent = "Bitte zuerst die Client ID eintragen."; return; }
+    if (location.protocol === "file:") { $("spStatus").textContent = "Öffne die Seite über https:// oder http://127.0.0.1 – direkt als Datei geht der Login nicht."; return; }
+    const verifier = b64url(crypto.getRandomValues(new Uint8Array(64)));
+    const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
+    const state = b64url(crypto.getRandomValues(new Uint8Array(12)));
+    store.set("pkce", { verifier, state });
+    const u = new URL(SP.auth);
+    u.search = new URLSearchParams({ client_id: cid, response_type: "code", redirect_uri: redirectUri, scope: SCOPES, code_challenge_method: "S256", code_challenge: challenge, state });
+    location.href = u.toString();
+  }
+  async function tokenRequest(params) {
+    const r = await fetch(SP.token, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(params) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error_description || j.error || "Anmeldung fehlgeschlagen");
+    spToken = { access: j.access_token, refresh: j.refresh_token || spToken?.refresh, exp: Date.now() + (j.expires_in - 60) * 1000 };
+    store.set("spToken", spToken);
+  }
+  async function handleRedirect() {
+    const p = new URLSearchParams(location.search);
+    if (!p.has("code") && !p.has("error")) return;
+    history.replaceState(null, "", redirectUri);
+    if (p.get("error")) { $("spStatus").textContent = "Spotify-Anmeldung abgebrochen."; return; }
+    const pk = store.get("pkce", null);
+    if (!pk || pk.state !== p.get("state")) { $("spStatus").textContent = "Anmeldung ungültig. Bitte noch einmal verbinden."; return; }
+    try {
+      await tokenRequest({ grant_type: "authorization_code", code: p.get("code"), redirect_uri: redirectUri, client_id: store.get("clientId", ""), code_verifier: pk.verifier });
+      store.del("pkce"); $("tab-sp").click();
+    } catch (e) { $("spStatus").textContent = e.message; }
+  }
+  async function accessToken() {
+    if (!spToken) throw new Error("Nicht mit Spotify verbunden.");
+    if (Date.now() > spToken.exp) await tokenRequest({ grant_type: "refresh_token", refresh_token: spToken.refresh, client_id: store.get("clientId", "") });
+    return spToken.access;
+  }
+  async function sp(path, opt = {}, retry = true) {
+    const r = await fetch(path.startsWith("http") ? path : SP.api + path, {
+      method: opt.method || "GET",
+      headers: { Authorization: "Bearer " + await accessToken(), ...(opt.body ? { "Content-Type": "application/json" } : {}) },
+      body: opt.body ? JSON.stringify(opt.body) : undefined
+    });
+    if (r.status === 401 && retry && spToken?.refresh) { spToken.exp = 0; return sp(path, opt, false); }
+    if (r.status === 429 && retry) { await sleep((+r.headers.get("Retry-After") || 2) * 1000); return sp(path, opt, false); }
+    if (r.status === 403) throw new Error("Spotify verweigert den Zugriff (403). Prüfe, ob dein Konto in der App unter „User Management“ eingetragen ist und Premium aktiv ist.");
+    if (!r.ok) { let m = r.statusText; try { m = (await r.json()).error?.message || m; } catch {} throw new Error(`Spotify: ${m}`); }
+    return r.status === 204 ? null : r.json().catch(() => null);
+  }
+  function spUi() {
+    const on = !!spToken;
+    $("spLogin").hidden = on; $("spLogout").hidden = !on; $("spLoaders").hidden = !on;
+    if (on && !$("spStatus").textContent) $("spStatus").textContent = "Verbunden.";
+  }
+  $("spLogin").addEventListener("click", spLogin);
+  $("spLogout").addEventListener("click", () => { spToken = null; store.del("spToken"); $("spStatus").textContent = "Abgemeldet."; spUi(); renderActions(); });
+  $("loadTop").addEventListener("click", async () => {
+    try {
+      $("spStatus").textContent = "Lade Top-Songs …";
+      const j = await sp("/me/top/tracks?time_range=short_term&limit=50");
+      const lines = (j.items || []).map((t) => `${t.name} – ${t.artists.map((a) => a.name).join(", ")}`);
+      addSeedLines(lines, true); $("spStatus").textContent = `${lines.length} Top-Songs der letzten 4 Wochen geladen.`;
+    } catch (e) { $("spStatus").textContent = e.message; }
+  });
+  $("loadRecent").addEventListener("click", async () => {
+    try {
+      $("spStatus").textContent = "Lade zuletzt gehörte Songs …";
+      const j = await sp("/me/player/recently-played?limit=50");
+      const lines = (j.items || []).map((it) => `${it.track.name} – ${it.track.artists.map((a) => a.name).join(", ")}`);
+      addSeedLines(lines, false); $("spStatus").textContent = `${lines.length} zuletzt gehörte Songs ergänzt. Mehrfach gehörte zählen stärker.`;
+    } catch (e) { $("spStatus").textContent = e.message; }
+  });
+
+  /* ---------- Last.fm ---------- */
+  function limiter(conc, gap) {
+    let active = 0, last = 0, timer = null; const q = [];
+    const next = () => {
+      if (active >= conc || !q.length) return;
+      const wait = last + gap - Date.now();
+      if (wait > 0) { if (!timer) timer = setTimeout(() => { timer = null; next(); }, wait); return; }
+      last = Date.now(); active++;
+      const { fn, res, rej } = q.shift();
+      fn().then(res, rej).finally(() => { active--; next(); });
+      next();
+    };
+    return (fn) => new Promise((res, rej) => { q.push({ fn, res, rej }); next(); });
+  }
+  const lfmQueue = limiter(4, 210);
+  const lfmCache = new Map();
+  async function lfm(method, params) {
+    const key = $("lfmKey").value.trim();
+    const qs = new URLSearchParams({ method, api_key: key, format: "json", autocorrect: "1", ...params });
+    const ck = qs.toString();
+    if (lfmCache.has(ck)) return lfmCache.get(ck);
+    const p = lfmQueue(async () => {
+      const r = await fetch("https://ws.audioscrobbler.com/2.0/?" + ck);
+      const j = await r.json();
+      if (j.error) { const e = new Error(j.message); e.code = j.error; throw e; }
+      return j;
+    });
+    lfmCache.set(ck, p);
+    p.catch(() => lfmCache.delete(ck));
+    return p;
+  }
+  const safe = (p) => p.catch((e) => { if (e.code === 10 || e.code === 26) throw e; return null; });
+  const artistInfoCache = new Map();
+  function artistInfo(name) {
+    const k = norm(name);
+    if (!artistInfoCache.has(k)) artistInfoCache.set(k, safe(lfm("artist.getInfo", { artist: name })).then((j) => {
+      const a = j?.artist; if (!a) return null;
+      const listeners = +a.stats?.listeners || 0, playcount = +a.stats?.playcount || 0;
+      return { name: a.name, listeners, playcount, ppl: listeners ? playcount / listeners : 0, tags: (a.tags?.tag || []).map((t) => t.name).slice(0, 5) };
+    }));
+    return artistInfoCache.get(k);
+  }
+  const firstArtist = (a) => String(a || "").split(/,\s*|\s+&\s+|\s+(?:feat\.?|ft\.?|x)\s+/i)[0].trim();
+
+  async function engineLastfm(seeds, o) {
+    if (!$("lfmKey").value.trim()) throw new Error("Für die Analyse fehlt der Last.fm API-Key (Schritt 2).");
+    const withArtist = seeds.filter((s) => s.artist);
+    if (!withArtist.length) throw new Error("Bei keinem Song ist ein Künstler angegeben. Schreib die Songs als „Titel – Künstler“.");
+
+    // A: Künstlerprofil
+    const artW = new Map();
+    withArtist.forEach((s) => { const a = firstArtist(s.artist); const k = norm(a); const cur = artW.get(k) || { name: a, w: 0 }; cur.w += s.w; artW.set(k, cur); });
+    const seedArtists = [...artW.values()].sort((a, b) => b.w - a.w);
+    const maxAW = seedArtists[0].w;
+    seedArtists.forEach((a) => (a.wn = a.w / maxAW));
+    log(`Künstlerprofile: ${Math.min(25, seedArtists.length)} Künstler bei Last.fm nachschlagen`);
+    const infos = await Promise.all(seedArtists.slice(0, 25).map(async (a) => ({ ...a, info: await artistInfo(a.name) })));
+    let sw = 0, sLog = 0, sPpl = 0; const tagW = new Map();
+    infos.forEach((a) => {
+      if (!a.info?.listeners) return;
+      sw += a.w; sLog += a.w * Math.log10(a.info.listeners); sPpl += a.w * a.info.ppl;
+      a.info.tags.forEach((t, i) => tagW.set(t.toLowerCase(), (tagW.get(t.toLowerCase()) || 0) + a.w * (1 - i * 0.15)));
+    });
+    if (!sw) throw new Error("Last.fm kennt keinen deiner Künstler. Prüfe die Schreibweise in der Liste.");
+    const userLog = sLog / sw, userPpl = sPpl / sw;
+    const knownArtists = new Set(seedArtists.map((a) => norm(a.name)));
+    const seedKeys = new Set(seeds.map((s) => keyOf(s.title, firstArtist(s.artist))));
+    seeds.forEach((s) => seedKeys.add(keyOf(s.title, s.artist)));
+
+    const cand = new Map();
+    const add = (title, artist, sim, from, kind) => {
+      const k = keyOf(title, artist);
+      if (seedKeys.has(k)) return;
+      const c = cand.get(k) || { title, artist, sim: 0, from: [], kind, key: k };
+      c.sim += sim; if (from && !c.from.includes(from)) c.from.push(from);
+      if (kind === "track") c.kind = "track";
+      cand.set(k, c);
+    };
+
+    // B: ähnliche Songs
+    const topSeeds = [...withArtist].sort((a, b) => b.w - a.w).slice(0, 20);
+    log(`Ähnliche Songs zu ${topSeeds.length} deiner Lieblingssongs suchen`);
+    let done = 0;
+    await Promise.all(topSeeds.map(async (s) => {
+      const j = await safe(lfm("track.getSimilar", { artist: firstArtist(s.artist), track: s.title, limit: "30" }));
+      (j?.similartracks?.track || []).forEach((t) => add(t.name, t.artist?.name, (+t.match || 0) * s.w, `„${s.title}“`, "track"));
+      if (++done % 5 === 0) log(`… ${done}/${topSeeds.length} Songs verglichen`);
+    }));
+
+    // C: ähnliche Künstler + Top-Songs
+    const simArt = new Map();
+    log("Ähnliche Künstler bestimmen");
+    await Promise.all(seedArtists.slice(0, 8).map(async (a) => {
+      const j = await safe(lfm("artist.getSimilar", { artist: a.name, limit: "15" }));
+      (j?.similarartists?.artist || []).forEach((x) => {
+        const k = norm(x.name); if (knownArtists.has(k)) return;
+        const cur = simArt.get(k) || { name: x.name, s: 0, via: a.name };
+        cur.s += (+x.match || 0) * a.wn; simArt.set(k, cur);
+      });
+    }));
+    const simList = [...simArt.values()].sort((a, b) => b.s - a.s);
+    const maxS = simList[0]?.s || 1;
+    log(`Top-Songs von ${Math.min(12, simList.length)} ähnlichen und ${Math.min(6, seedArtists.length)} deiner Künstler laden`);
+    await Promise.all([
+      ...simList.slice(0, 12).map(async (a) => {
+        const j = await safe(lfm("artist.getTopTracks", { artist: a.name, limit: "5" }));
+        (j?.toptracks?.track || []).forEach((t, i) => add(t.name, a.name, 0.45 * (a.s / maxS) * (1 - i * 0.12), `ähnlich wie ${a.via}`, "artist"));
+      }),
+      ...seedArtists.slice(0, 6).map(async (a) => {
+        const j = await safe(lfm("artist.getTopTracks", { artist: a.name, limit: "10" }));
+        (j?.toptracks?.track || []).forEach((t, i) => add(t.name, a.name, 0.35 * a.wn * (1 - i * 0.07), `mehr von ${a.name}`, "own"));
+      })
+    ]);
+    if (!cand.size) throw new Error("Last.fm hat keine ähnlichen Songs gefunden. Ergänze ein paar bekanntere Songs.");
+
+    // D: Bekanntheit & Hörtiefe abgleichen
+    let list = [...cand.values()];
+    const maxSim = Math.max(...list.map((c) => c.sim));
+    list.forEach((c) => (c.simN = c.sim / maxSim));
+    list.sort((a, b) => b.simN - a.simN);
+    list = list.slice(0, Math.max(90, o.len * 3));
+    const candArtists = [...new Set(list.map((c) => c.artist))];
+    log(`Hörerzahlen von ${candArtists.length} Künstlern vergleichen`);
+    await Promise.all(candArtists.map((a) => artistInfo(a)));
+    const target = userLog + ((o.pop - 50) / 50) * 1.0;
+    const disc = o.disc / 100;
+    for (const c of list) {
+      const inf = await artistInfo(c.artist);
+      c.listeners = inf?.listeners || 0; c.ppl = inf?.ppl || 0;
+      const popFit = c.listeners ? Math.exp(-((Math.log10(c.listeners) - target) ** 2) / (2 * 0.6 ** 2)) : 0.4;
+      const pplFit = c.ppl && userPpl ? Math.exp(-(Math.log(c.ppl / userPpl) ** 2) / (2 * 0.5 ** 2)) : 0.5;
+      c.fit = 0.75 * popFit + 0.25 * pplFit;
+      c.known = knownArtists.has(norm(c.artist));
+      const novelty = c.known ? 1 - disc : disc;
+      c.score = 0.5 * c.simN + 0.3 * c.fit + 0.2 * novelty;
+    }
+    const topTags = [...tagW.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map((x) => x[0]);
+    return {
+      engine: "lastfm",
+      candidates: list,
+      profile: {
+        avgListeners: Math.round(10 ** userLog), avgPpl: userPpl, tags: topTags,
+        artists: infos.filter((a) => a.info?.listeners).slice(0, 6).map((a) => ({ name: a.info.name, w: a.wn, listeners: a.info.listeners, ppl: a.info.ppl }))
+      }
+    };
+  }
+
+  /* ---------- Claude (im Viewer) ---------- */
+  async function engineClaude(seeds, o, signal) {
+    if (!sample) throw new Error("Claude ist in dieser Ansicht nicht verfügbar.");
+    const list = seeds.slice(0, 80).map((s, i) => `${i + 1}. ${s.title}${s.artist ? " – " + s.artist : ""}`).join("\n");
+    const want = o.len + 8;
+    const prompt =
+`Du kuratierst eine persönliche Spotify-Wochenplaylist. Hier ist die Hörliste der Person, oben = häufiger gehört:
+${list}
+
+Vorgehen:
+1. Schätze für jeden Künstler der Liste die Bekanntheit (monatliche Hörer weltweit, grobe Größenordnung) und wie treu seine Fans sind (Wiedergaben pro Hörer: niedrig, mittel, hoch). Bilde daraus das Profil der Person.
+2. Schlage genau ${want} reale, existierende Songs vor, die du sicher kennst. Keine Songs aus der Liste. Höchstens ${o.maxPer} pro Künstler.
+3. Etwa ${o.disc} % der Songs sollen von Künstlern stammen, die nicht in der Liste stehen; der Rest von Künstlern aus der Liste (andere Songs).
+4. Bekanntheit der vorgeschlagenen Künstler: ${popWord(o.pop)} als der Durchschnitt der Liste.
+5. Bewerte jeden Vorschlag: similarity = wie stark er klanglich und stilistisch einem bestimmten Song der Liste ähnelt (0 bis 1); basedOn = dieser Song, exakt wie in der Liste geschrieben.
+6. Ordne die Songs so, dass die Playlist gut fließt.
+
+Antworte nur mit JSON in genau dieser Form:
+{"profil":{"beschreibung":"2 Sätze auf Deutsch über den Musikgeschmack","stichworte":["bis zu 6 Genres/Stimmungen"],"durchschnittHoerer":Zahl,"kuenstler":[{"name":"…","hoerer":Zahl,"treue":"niedrig|mittel|hoch"}]},
+"tracks":[{"title":"…","artist":"…","basedOn":"…","similarity":0.8,"hoerer":Zahl,"known":true,"reason":"höchstens 10 Wörter auf Deutsch"}]}
+"kuenstler" enthält die bis zu 6 wichtigsten Künstler der Liste.`;
+    let chars = 0;
+    const res = await sample.json(prompt, { cache: false, signal, onText: ({ text }) => { if (text.length - chars > 400) { chars = text.length; logReplace(`Claude schreibt … ${Math.min(99, Math.round(text.length / (want * 1.9)))} %`); } } });
+    if (!res || !Array.isArray(res.tracks)) throw new Error("Claude hat keine Songliste geliefert. Versuch es noch einmal.");
+    const seedKeys = new Set(seeds.map((s) => keyOf(s.title, s.artist)));
+    const known = new Set(seeds.map((s) => norm(firstArtist(s.artist))));
+    const disc = o.disc / 100;
+    const n = res.tracks.length;
+    const candidates = res.tracks.filter((t) => t && t.title && t.artist && !seedKeys.has(keyOf(t.title, t.artist))).map((t, i) => {
+      const isKnown = known.has(norm(firstArtist(t.artist)));
+      const simN = Math.max(0, Math.min(1, +t.similarity || 0.5));
+      return {
+        title: String(t.title), artist: String(t.artist), key: keyOf(t.title, t.artist), simN, known: isKnown,
+        listeners: +t.hoerer || 0, from: t.basedOn ? [`„${t.basedOn}“`] : [], reason: t.reason || "",
+        score: 0.6 * simN + 0.2 * (1 - i / n) + 0.2 * (isKnown ? 1 - disc : disc), order: i, estimated: true
+      };
+    });
+    const p = res.profil || {};
+    return {
+      engine: "claude", candidates, keepOrder: true,
+      profile: {
+        text: p.beschreibung || "", tags: Array.isArray(p.stichworte) ? p.stichworte.slice(0, 8) : [], avgListeners: +p.durchschnittHoerer || 0, estimated: true,
+        artists: (Array.isArray(p.kuenstler) ? p.kuenstler : []).slice(0, 6).map((a, i, arr) => ({ name: a.name, listeners: +a.hoerer || 0, treue: a.treue, w: 1 - i / Math.max(1, arr.length) }))
+      }
+    };
+  }
+  function logReplace(msg) { const last = logEl.lastElementChild; if (last && last.dataset.live) last.textContent = msg; else { log(msg); logEl.lastElementChild.dataset.live = "1"; } }
+
+  /* ---------- Auswahl ---------- */
+  function select(result, o) {
+    const history = o.noRepeat ? store.get("history", []).filter((h) => h.week !== WEEK_ID).slice(-4) : [];
+    const old = new Set(history.flatMap((h) => h.keys));
+    const perArtist = new Map();
+    const pool = [...result.candidates].sort((a, b) => b.score - a.score);
+    const picked = [];
+    for (const c of pool) {
+      if (picked.length >= o.len) break;
+      if (old.has(c.key)) continue;
+      const ak = norm(c.artist);
+      if ((perArtist.get(ak) || 0) >= o.maxPer) continue;
+      perArtist.set(ak, (perArtist.get(ak) || 0) + 1);
+      picked.push(c);
+    }
+    if (result.keepOrder) picked.sort((a, b) => a.order - b.order);
+    else {
+      // gleicher Künstler nie direkt hintereinander
+      for (let i = 1; i < picked.length; i++) {
+        if (norm(picked[i].artist) === norm(picked[i - 1].artist)) {
+          const j = picked.findIndex((x, idx) => idx > i && norm(x.artist) !== norm(picked[i - 1].artist));
+          if (j > 0) [picked[i], picked[j]] = [picked[j], picked[i]];
+        }
+      }
+    }
+    return picked;
+  }
+
+  /* ---------- Darstellung ---------- */
+  const fmtN = (n) => !n ? "–" : n >= 1e6 ? (n / 1e6).toLocaleString("de-CH", { maximumFractionDigits: 1 }) + " Mio." : n >= 1e3 ? Math.round(n / 1e3).toLocaleString("de-CH") + " Tsd." : String(n);
+  const searchUrl = (t) => "https://open.spotify.com/search/" + encodeURIComponent(`${t.title} ${firstArtist(t.artist)}`);
+  let current = null; // {tracks, profile, engine, example}
+
+  function render() {
+    const R = $("result");
+    if (!current) { R.innerHTML = `<div class="empty">Noch kein Mix.</div>`; return; }
+    const { tracks, profile, engine, example } = current;
+    const est = engine === "claude" ? " (geschätzt)" : "";
+    const known = tracks.filter((t) => t.known).length;
+    const avgSim = tracks.length ? Math.round(100 * tracks.reduce((s, t) => s + t.simN, 0) / tracks.length) : 0;
+    const maxL = Math.max(1, ...(profile.artists || []).map((a) => a.listeners || 0));
+    R.innerHTML = `
+      <div class="res-head">
+        ${example ? `<span class="tag-example">Beispiel – so sieht dein Ergebnis aus</span>` : ""}
+        <h2>Wochenmix ${WEEK_LABEL}</h2>
+        <div class="meta"><span>${RANGE}</span><span>${tracks.length} Songs</span><span>${tracks.length - known} neue · ${known} vertraute Künstler</span><span>Ø Ähnlichkeit ${avgSim} %</span><span>Quelle: ${engine === "claude" ? "Claude-Schätzung" : engine === "lastfm" ? "Last.fm-Hördaten" : "Beispiel"}</span></div>
+      </div>
+      ${profile ? `<div class="profile">
+        <div class="stat"><h3>Dein Profil</h3>${profile.avgListeners ? `<b>${fmtN(profile.avgListeners)}</b><span>Hörer pro Künstler im Schnitt${est}</span>` : `<span>Hier erscheinen die durchschnittlichen Hörerzahlen deiner Künstler.</span>`}
+          ${profile.avgPpl ? `<div style="margin-top:8px"><b>${profile.avgPpl.toLocaleString("de-CH", { maximumFractionDigits: 1 })}×</b><span>Wiedergaben pro Hörer – so treu sind die Fans deiner Künstler</span></div>` : ""}
+        </div>
+        ${profile.artists?.length ? `<div><h3>Deine Künstler · Hörer${est}</h3><div class="bars">${profile.artists.map((a) => `
+          <div class="bar"><span class="n">${esc(a.name)}</span><span class="track"><i style="width:${Math.max(4, 100 * (a.listeners || 0) / maxL)}%"></i></span>
+          <span class="v"><span>${fmtN(a.listeners)}</span><span>${a.ppl ? a.ppl.toFixed(1) + "× / Hörer" : a.treue ? "Treue: " + esc(a.treue) : ""}</span></span></div>`).join("")}</div></div>` : ""}
+        <div><h3>Stil</h3>${profile.text ? `<p style="margin-bottom:8px">${esc(profile.text)}</p>` : ""}<div class="chips">${(profile.tags || []).map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div></div>
+      </div>` : ""}
+      <ol class="tracks">${tracks.map((t, i) => `
+        <li>
+          <span class="pos">${i + 1}</span>
+          <div class="t-main">
+            <div class="t-title">${esc(t.title)}</div>
+            <div class="t-artist">${esc(t.artist)}</div>
+            <div class="t-why"><span class="pill ${t.known ? "known" : "new"}">${t.known ? "Vertraut" : "Neu"}</span>${t.spMissing ? `<span class="pill miss">Nicht auf Spotify gefunden</span>` : ""}
+              <span>${esc(t.reason || (t.from?.length ? (t.from[0].startsWith("„") ? "ähnlich wie " : "") + t.from[0] + (t.from.length > 1 ? ` +${t.from.length - 1}` : "") : ""))}</span>
+              ${t.listeners ? `<span>· ${fmtN(t.listeners)} Hörer${t.estimated ? " (geschätzt)" : ""}</span>` : ""}</div>
+          </div>
+          <div class="t-side"><span title="Ähnlichkeit zu deinen Songs">${Math.round(t.simN * 100)} %</span><span class="meter" aria-hidden="true"><i style="width:${Math.round(t.simN * 100)}%"></i></span>
+            <a href="${t.spUrl || searchUrl(t)}" target="_blank" rel="noopener">${t.spUrl ? "Öffnen" : "Auf Spotify suchen"}</a></div>
+        </li>`).join("")}</ol>
+      <div class="res-actions" id="resActions"></div>`;
+    renderActions();
+  }
+  function renderActions() {
+    const box = $("resActions"); if (!box || !current) return;
+    box.textContent = "";
+    if (current.example) { const s = document.createElement("span"); s.className = "status"; s.textContent = "Füge deine Songs ein und tippe auf „Wochenmix erstellen“."; box.append(s); return; }
+    const mk = (txt, cls, fn) => { const b = document.createElement("button"); b.className = "btn " + (cls || ""); b.textContent = txt; b.addEventListener("click", fn); box.append(b); return b; };
+    if (STANDALONE && spToken) {
+      mk("In Spotify speichern", "primary", saveToSpotify);
+      const lab = document.createElement("label"); lab.className = "check";
+      lab.innerHTML = `<input type="checkbox" id="overwrite"${store.get("playlistId", null) ? " checked" : ""}> Bisherige Wochenmix-Playlist ersetzen`;
+      box.append(lab);
+    }
+    mk("Liste kopieren", "", copyList);
+    mk("Neu mischen", "", () => build(true));
+    const s = document.createElement("span"); s.className = "status"; s.id = "actStatus";
+    if (!STANDALONE) s.textContent = "Zum automatischen Speichern in Spotify die selbst gehostete Version nutzen.";
+    else if (!spToken) s.textContent = "Mit Spotify verbinden, um die Playlist direkt anzulegen.";
+    box.append(s);
+  }
+  async function copyList() {
+    const txt = `Wochenmix ${WEEK_LABEL} (${RANGE})\n` + current.tracks.map((t, i) => `${i + 1}. ${t.title} – ${t.artist}`).join("\n");
+    const st = $("actStatus");
+    try { await navigator.clipboard.writeText(txt); st.textContent = "Liste kopiert."; }
+    catch {
+      let ta = $("copyBox");
+      if (!ta) { ta = document.createElement("textarea"); ta.id = "copyBox"; ta.readOnly = true; ta.style.minHeight = "140px"; $("resActions").append(ta); }
+      ta.value = txt; ta.focus(); ta.select();
+      st.textContent = "Text ist markiert – jetzt kopieren.";
+    }
+  }
+
+  /* ---------- In Spotify speichern ---------- */
+  async function saveToSpotify() {
+    const st = $("actStatus"); const btn = document.querySelector("#resActions .btn.primary"); if (btn) btn.disabled = true;
+    try {
+      const q = limiter(3, 120); let n = 0;
+      await Promise.all(current.tracks.map((t) => q(async () => {
+        const query = `track:${t.title.replace(/["']/g, "")} artist:${firstArtist(t.artist).replace(/["']/g, "")}`;
+        let j = await sp(`/search?type=track&limit=5&q=${encodeURIComponent(query)}`);
+        let item = j?.tracks?.items?.[0];
+        if (!item) { j = await sp(`/search?type=track&limit=5&q=${encodeURIComponent(t.title + " " + firstArtist(t.artist))}`); item = j?.tracks?.items?.[0]; }
+        t.spUri = item?.uri || null; t.spUrl = item?.external_urls?.spotify || null; t.spMissing = !item;
+        st.textContent = `Songs auf Spotify suchen … ${++n}/${current.tracks.length}`;
+      })));
+      const uris = current.tracks.map((t) => t.spUri).filter(Boolean);
+      if (!uris.length) throw new Error("Keiner der Songs wurde auf Spotify gefunden.");
+      const name = `Wochenmix ${WEEK_LABEL} · ${RANGE}`;
+      const description = `${uris.length} Songs, erstellt am ${now.toLocaleDateString("de-CH")} aus deinen Hördaten, Künstler-Hörerzahlen und ähnlichen Songs.`;
+      const overwrite = $("overwrite")?.checked && store.get("playlistId", null);
+      let pl;
+      if (overwrite) {
+        const id = store.get("playlistId", null);
+        try { await sp(`/playlists/${id}`, { method: "PUT", body: { name, description } }); } catch {}
+        await sp(`/playlists/${id}/items`, { method: "PUT", body: { uris: uris.slice(0, 100) } });
+        pl = { id, external_urls: { spotify: store.get("playlistUrl", `https://open.spotify.com/playlist/${id}`) } };
+      } else {
+        pl = await sp("/me/playlists", { method: "POST", body: { name, description, public: false } });
+        await sp(`/playlists/${pl.id}/items`, { method: "POST", body: { uris: uris.slice(0, 100) } });
+      }
+      store.set("playlistId", pl.id); store.set("playlistUrl", pl.external_urls?.spotify);
+      render();
+      const s2 = $("actStatus");
+      s2.innerHTML = `Gespeichert: ${uris.length} Songs${uris.length < current.tracks.length ? `, ${current.tracks.length - uris.length} nicht gefunden` : ""}. <a href="${esc(pl.external_urls?.spotify || "#")}" target="_blank" rel="noopener">Playlist öffnen</a>`;
+    } catch (e) { st.textContent = e.message; if (btn) btn.disabled = false; }
+  }
+
+  /* ---------- Ablauf ---------- */
+  let running = null;
+  async function build(reshuffle) {
+    const seeds = parseSeeds();
+    if (seeds.length < 3) { clearLog(); log("Bitte mindestens 3 Songs in die Liste eintragen."); return; }
+    const o = { len: +lenEl.value, disc: +discEl.value, pop: +popEl.value, maxPer: +$("maxPer").value, noRepeat: $("noRepeat").checked };
+    const btn = $("build"); btn.disabled = true; clearLog();
+    running?.abort(); running = new AbortController();
+    try {
+      let result;
+      if (STANDALONE) {
+        log(`Analyse von ${seeds.length} Songs über Last.fm`);
+        result = await engineLastfm(seeds, o);
+        if (reshuffle) result.candidates.forEach((c) => (c.score *= 0.85 + Math.random() * 0.3));
+      } else {
+        log(`Claude analysiert ${seeds.length} Songs – das dauert meist 30–90 Sekunden`);
+        result = await engineClaude(seeds, o, running.signal);
+      }
+      const tracks = select(result, o);
+      if (!tracks.length) throw new Error("Nach allen Filtern blieb kein Song übrig. Erlaube mehr Songs pro Künstler oder schalte die Wiederholungssperre aus.");
+      current = { tracks, profile: result.profile, engine: result.engine, example: false };
+      const hist = store.get("history", []).filter((h) => h.week !== WEEK_ID);
+      hist.push({ week: WEEK_ID, keys: tracks.map((t) => t.key) }); store.set("history", hist.slice(-6));
+      store.set("lastMix", current);
+      log(`Fertig: ${tracks.length} Songs ausgewählt`);
+      render();
+      if (window.matchMedia("(max-width: 900px)").matches) $("result").scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (e) {
+      log(e.code ? sampleErr(e) : e.message || String(e));
+    } finally { btn.disabled = false; }
+  }
+  $("build").addEventListener("click", () => build(false));
+
+  function sampleErr(e) {
+    const c = e?.code;
+    if (!c || typeof c === "number") return e?.message || String(e);
+    return ({
+      not_granted: "Du hast Claude für diese Seite nicht freigegeben. Schreib die Songs von Hand in die Liste.",
+      sampling_disabled: "Claude ist für dieses Konto nicht verfügbar.",
+      rate_limited: "Gerade zu viele Anfragen. Versuch es in ein paar Minuten noch einmal.",
+      image_rejected: "Ein Bild konnte nicht gelesen werden. Nimm einen PNG- oder JPG-Screenshot.",
+      images_unavailable: "Bilder können in dieser Ansicht nicht gesendet werden. Schreib die Songs von Hand in die Liste.",
+      invalid_json: "Die Antwort war unvollständig. Tippe noch einmal auf den Knopf.",
+      cancelled: "Abgebrochen.",
+      session_expired: "Bitte bei Claude neu anmelden.",
+      refused: "Claude hat die Anfrage abgelehnt. Prüfe die Songliste."
+    })[c] || "Verbindung unterbrochen. Versuch es noch einmal.";
+  }
+
+  /* ---------- Beispiel im Ruhezustand ---------- */
+  const exampleMix = {
+    example: true, engine: "example",
+    profile: { avgListeners: 0, tags: ["indie", "psychedelic pop", "synthpop", "electronic"], text: "Ein Beispielprofil für die Beispielliste links.", artists: [] },
+    tracks: [
+      ["The Less I Know the Better", "Tame Impala", true, 0.86, "ähnlich wie „Feels Like We Only Go Backwards“"],
+      ["Breezeblocks", "alt-J", false, 0.71, "ähnlich wie „Do I Wanna Know?“"],
+      ["Oblivion", "Grimes", false, 0.66, "ähnlich wie „Midnight City“"],
+      ["Starboy", "The Weeknd", true, 0.74, "mehr von The Weeknd"],
+      ["Sweater Weather", "The Neighbourhood", false, 0.69, "ähnlich wie „Heat Waves“"],
+      ["Instant Crush", "Daft Punk", true, 0.72, "mehr von Daft Punk"]
+    ].map(([title, artist, known, simN, reason]) => ({ title, artist, known, simN, reason, from: [] }))
+  };
+  const saved = store.get("lastMix", null);
+  current = saved && saved.tracks?.length ? saved : exampleMix;
+  if (current.profile && !current.profile.avgListeners && current.example) current.profile.avgListeners = 0;
+
+  /* ---------- Modus ---------- */
+  let maxImages = 4;
+  function modeUi() {
+    if (STANDALONE) {
+      $("modeText").textContent = "Selbst gehostet · Spotify + Last.fm";
+      $("shotHint").textContent = "Die Texterkennung läuft in deinem Browser. Prüfe danach kurz die Liste – Screenshots sind nicht immer eindeutig.";
+      $("spBlocked").hidden = true; $("spPanel").hidden = false; $("lfmField").hidden = false;
+    } else {
+      $("modeText").textContent = sample ? "Im Claude-Viewer · Analyse durch Claude" : "Im Claude-Viewer";
+      $("shotHint").textContent = "Claude liest die Songs aus deinen Bildern. Ähnlichkeit und Hörerzahlen schätzt Claude aus seinem Musikwissen; mit Last.fm-Daten rechnet die selbst gehostete Version.";
+      $("spBlocked").hidden = false; $("spPanel").hidden = true; $("lfmField").hidden = true;
+    }
+  }
+  modeUi();
+  if (IN_CLAUDE) {
+    window.claude.use("sample").then(async (s) => {
+      sample = s;
+      if (s) { try { const lim = await s.limits(); sampleImages = !!lim?.images; maxImages = lim?.images?.maxCount || 4; } catch { sampleImages = false; } }
+      if (!s) { $("build").disabled = true; log("Claude ist in dieser Ansicht nicht verfügbar. Nutze die selbst gehostete Version."); }
+      modeUi();
+    });
+  }
+
+  handleRedirect().finally(() => { spUi(); render(); });
+})();
+</script>
