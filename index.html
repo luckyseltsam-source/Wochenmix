@@ -155,7 +155,7 @@ a { color: var(--accent); }
   <header class="top">
     <div class="brand">
       <h1>Wochenmix</h1>
-      <p>Liest deine Hörgewohnheiten aus einem Screenshot oder deinem Spotify-Konto, vergleicht Künstler-Hörerzahlen und ähnliche Songs und stellt daraus die Playlist für diese Woche zusammen.</p>
+      <p>Liest deine Top 50 aus deinem Spotify-Konto oder einem Screenshot, sucht ähnliche Songs und Künstler, gleicht ab, wie bekannt deine Künstler sind, und stellt daraus die Playlist für diese Woche zusammen.</p>
       <div class="mode" id="modeBadge"><i></i><span id="modeText">Modus wird erkannt …</span></div>
     </div>
     <div class="weekstamp"><b id="kw">KW</b><span id="range"></span></div>
@@ -194,9 +194,15 @@ a { color: var(--accent); }
               <button class="btn primary" id="spLogin">Mit Spotify verbinden</button>
               <button class="btn" id="spLogout" hidden>Abmelden</button>
             </div>
-            <div class="row" id="spLoaders" hidden>
-              <button class="btn" id="loadTop">Top-Songs (4 Wochen)</button>
-              <button class="btn" id="loadRecent">Zuletzt gehört (50)</button>
+            <div class="panel" id="spLoaders" hidden>
+              <div class="slider">
+                <div class="lab"><label for="span">Zeitraum für deine Top 50</label><output id="spanOut">7 Tage</output></div>
+                <input type="range" id="span" min="0" max="6" step="1" value="2">
+                <div class="ends"><span>1 Tag</span><span>1 Jahr</span></div>
+              </div>
+              <p class="hint" id="spanHint"></p>
+              <div class="row"><button class="btn primary" id="loadTop">Top 50 laden</button></div>
+              <p class="note" id="histInfo"></p>
             </div>
             <span class="status" id="spStatus"></span>
           </div>
@@ -215,9 +221,6 @@ a { color: var(--accent); }
       <!-- 2 Einstellungen -->
       <section class="step" aria-labelledby="s2">
         <h2 id="s2"><span>2</span>Mischung</h2>
-        <label class="field" id="lfmField">Last.fm API-Key <small>kostenlos, liefert Ähnlichkeiten und Hörerzahlen</small>
-          <input type="password" id="lfmKey" autocomplete="off" spellcheck="false" placeholder="32 Zeichen">
-        </label>
         <div class="slider">
           <div class="lab"><label for="len">Länge</label><output id="lenOut">30 Songs</output></div>
           <input type="range" id="len" min="15" max="50" step="5" value="30">
@@ -255,10 +258,10 @@ a { color: var(--accent); }
     <details class="help" open>
       <summary>So bekommst du die volle Version mit Spotify-Konto</summary>
       <ol>
-        <li>Lade diese Seite als <span class="kbd">wochenmix.html</span> herunter (Datei aus dem Chat) und stelle sie online, z. B. als <span class="kbd">index.html</span> in einem GitHub-Pages-Repository. Lokal geht es auch: im Ordner <span class="kbd">python3 -m http.server 8080 --bind 127.0.0.1</span> starten und <span class="kbd">http://127.0.0.1:8080/wochenmix.html</span> öffnen.</li>
+        <li>Lade die Datei <span class="kbd">index.html</span> aus dem Chat herunter und stelle sie online, z. B. in einem GitHub-Pages-Repository. Lokal geht es auch: im Ordner <span class="kbd">python3 -m http.server 8080 --bind 127.0.0.1</span> starten und <span class="kbd">http://127.0.0.1:8080/</span> öffnen.</li>
         <li>Auf developer.spotify.com/dashboard eine App anlegen, „Web API“ ankreuzen und als Redirect URI genau die Adresse der Seite eintragen (wird oben unter „Spotify-Konto“ angezeigt). Spotify verlangt dafür ein Premium-Konto.</li>
         <li>Unter „User Management“ dein eigenes Spotify-Konto eintragen und die Client ID in die Seite kopieren.</li>
-        <li>Auf last.fm/api/account/create einen kostenlosen API-Key holen und unter „Mischung“ einfügen.</li>
+        <li>Ähnliche Songs und Fan-Zahlen kommen von Deezer. Dafür brauchst du keinen Schlüssel und kein Konto. Falls ein Werbeblocker Deezer sperrt, erlaube ihn für diese Seite.</li>
       </ol>
     </details>
   </section>
@@ -295,7 +298,7 @@ a { color: var(--accent); }
   const fmtD = (d) => d.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" });
   const WEEK_ID = `${W.year}-W${String(W.week).padStart(2, "0")}`;
   const WEEK_LABEL = `KW ${W.week}`;
-  const RANGE = `${fmtD(mon)}–${fmtD(sun)}.${sun.getFullYear()}`;
+  const RANGE = `${fmtD(mon)}–${fmtD(sun)}${sun.getFullYear()}`;
   $("kw").textContent = WEEK_LABEL; $("range").textContent = RANGE;
 
   /* ---------- Tabs ---------- */
@@ -361,8 +364,6 @@ a { color: var(--accent); }
   if (st) { lenEl.value = st.len; discEl.value = st.disc; popEl.value = st.pop; $("maxPer").value = st.maxPer; $("noRepeat").checked = st.noRepeat; }
   [lenEl, discEl, popEl, $("maxPer"), $("noRepeat")].forEach((e) => e.addEventListener("input", syncSliders));
   syncSliders();
-  $("lfmKey").value = store.get("lfmKey", "");
-  $("lfmKey").addEventListener("input", (e) => store.set("lfmKey", e.target.value.trim()));
 
   /* ---------- Log ---------- */
   const logEl = $("log");
@@ -447,7 +448,7 @@ a { color: var(--accent); }
   /* ---------- Spotify (PKCE) ---------- */
   const SP = { auth: "https://accounts.spotify.com/authorize", token: "https://accounts.spotify.com/api/token", api: "https://api.spotify.com/v1" };
   const SCOPES = "user-top-read user-read-recently-played playlist-modify-private playlist-modify-public";
-  const redirectUri = location.origin + location.pathname;
+  const redirectUri = location.origin + location.pathname.replace(/index\.html$/, "");
   $("redirectUri").textContent = redirectUri;
   $("clientId").value = store.get("clientId", "");
   $("clientId").addEventListener("input", (e) => store.set("clientId", e.target.value.trim()));
@@ -509,24 +510,93 @@ a { color: var(--accent); }
   }
   $("spLogin").addEventListener("click", spLogin);
   $("spLogout").addEventListener("click", () => { spToken = null; store.del("spToken"); $("spStatus").textContent = "Abgemeldet."; spUi(); renderActions(); });
+  /* ---------- Zeitraum & eigener Verlauf ---------- */
+  const SPANS = [
+    { days: 1, label: "1 Tag" }, { days: 3, label: "3 Tage" }, { days: 7, label: "7 Tage" }, { days: 14, label: "14 Tage" },
+    { range: "short_term", label: "4 Wochen", txt: "etwa die letzten 4 Wochen" },
+    { range: "medium_term", label: "6 Monate", txt: "etwa die letzten 6 Monate" },
+    { range: "long_term", label: "1 Jahr+", txt: "etwa das letzte Jahr und länger" }
+  ];
+  const spanEl = $("span");
+  spanEl.value = store.get("span", 2);
+  function syncSpan() {
+    const s = SPANS[+spanEl.value] || SPANS[2];
+    $("spanOut").textContent = s.label;
+    $("spanHint").textContent = s.days
+      ? `Gezählt aus dem Verlauf, den diese Seite sammelt: deine meistgehörten Songs der letzten ${s.label}.`
+      : `Spotifys eigene Rangliste für ${s.txt}.`;
+    store.set("span", +spanEl.value);
+  }
+  spanEl.addEventListener("input", syncSpan); syncSpan();
+
+  const HIST_DAYS = 35;
+  let plays = store.get("plays", []);
+  let gaps = store.get("gaps", 0);
+  const trackLine = (t) => `${t.name} – ${t.artists.map((a) => a.name).join(", ")}`;
+  async function collectPlays() {
+    if (!spToken) return 0;
+    const j = await sp("/me/player/recently-played?limit=50");
+    const items = (j?.items || []).filter((it) => it.track && it.played_at);
+    const have = new Set(plays.map((p) => p.t));
+    const fresh = items.filter((it) => !have.has(it.played_at))
+      .map((it) => ({ t: it.played_at, id: it.track.id, n: it.track.name, a: it.track.artists.map((x) => x.name).join(", ") }));
+    if (plays.length && items.length >= 50 && fresh.length === items.length) { gaps++; store.set("gaps", gaps); }
+    const cutoff = Date.now() - HIST_DAYS * 864e5;
+    plays = [...plays, ...fresh].filter((p) => Date.parse(p.t) >= cutoff).sort((x, y) => (x.t < y.t ? -1 : 1));
+    store.set("plays", plays); store.set("lastCollect", Date.now());
+    histUi();
+    return fresh.length;
+  }
+  function histUi() {
+    const el = $("histInfo");
+    if (!plays.length) { el.textContent = "Diese Seite sammelt ab jetzt deine Wiedergaben. Spotify gibt immer nur die letzten 50 heraus. Öffne die Seite deshalb mindestens einmal am Tag, an Tagen mit viel Musik öfter."; return; }
+    const since = new Date(plays[0].t).toLocaleDateString("de-CH", { weekday: "short", day: "2-digit", month: "2-digit" });
+    const last = store.get("lastCollect", 0);
+    el.textContent = `Verlauf: ${plays.length} Wiedergaben seit ${since}` +
+      (last ? `, aktualisiert um ${new Date(last).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}` : "") + ". " +
+      (gaps ? `${gaps}× fehlte ein Stück, weil zwischen zwei Besuchen mehr als 50 Songs liefen. ` : "") +
+      "Spotify gibt immer nur die letzten 50 Wiedergaben heraus, also öffne die Seite mindestens einmal am Tag.";
+  }
   $("loadTop").addEventListener("click", async () => {
+    const s = SPANS[+spanEl.value] || SPANS[2]; const stEl = $("spStatus"); const btn = $("loadTop");
+    btn.disabled = true;
     try {
-      $("spStatus").textContent = "Lade Top-Songs …";
-      const j = await sp("/me/top/tracks?time_range=short_term&limit=50");
-      const lines = (j.items || []).map((t) => `${t.name} – ${t.artists.map((a) => a.name).join(", ")}`);
-      addSeedLines(lines, true); $("spStatus").textContent = `${lines.length} Top-Songs der letzten 4 Wochen geladen.`;
-    } catch (e) { $("spStatus").textContent = e.message; }
-  });
-  $("loadRecent").addEventListener("click", async () => {
-    try {
-      $("spStatus").textContent = "Lade zuletzt gehörte Songs …";
-      const j = await sp("/me/player/recently-played?limit=50");
-      const lines = (j.items || []).map((it) => `${it.track.name} – ${it.track.artists.map((a) => a.name).join(", ")}`);
-      addSeedLines(lines, false); $("spStatus").textContent = `${lines.length} zuletzt gehörte Songs ergänzt. Mehrfach gehörte zählen stärker.`;
-    } catch (e) { $("spStatus").textContent = e.message; }
+      if (s.range) {
+        stEl.textContent = `Lade Top 50 (${s.label}) …`;
+        const j = await sp(`/me/top/tracks?time_range=${s.range}&limit=50`);
+        const lines = (j?.items || []).map(trackLine);
+        if (!lines.length) throw new Error("Spotify hat für diesen Zeitraum noch keine Top-Songs.");
+        addSeedLines(lines, true); stEl.textContent = `${lines.length} Top-Songs (${s.label}) geladen.`;
+        return;
+      }
+      stEl.textContent = "Verlauf wird aktualisiert …";
+      await collectPlays();
+      const from = Date.now() - s.days * 864e5;
+      const counts = new Map(); let total = 0;
+      plays.filter((p) => Date.parse(p.t) >= from).forEach((p) => {
+        const k = p.id || keyOf(p.n, p.a);
+        const c = counts.get(k) || { n: p.n, a: p.a, c: 0, last: p.t };
+        c.c++; total++; if (p.t > c.last) c.last = p.t; counts.set(k, c);
+      });
+      const top = [...counts.values()].sort((x, y) => y.c - x.c || (y.last > x.last ? 1 : -1)).slice(0, 50);
+      const lines = top.map((x) => `${x.n} – ${x.a}`);
+      let msg = `${top.length} Songs aus ${total} Wiedergaben der letzten ${s.label}`;
+      if (lines.length < 50) {
+        const covered = plays.length ? (Date.now() - Date.parse(plays[0].t)) / 864e5 : 0;
+        const j = await sp("/me/top/tracks?time_range=short_term&limit=50");
+        const seen = new Set(lines.map(norm));
+        const extra = (j?.items || []).map(trackLine).filter((l) => !seen.has(norm(l)));
+        const add = extra.slice(0, 50 - lines.length); lines.push(...add);
+        if (add.length) msg += `, aufgefüllt mit ${add.length} Top-Songs der letzten 4 Wochen`;
+        if (covered < s.days - 0.5) msg += ` (dein Verlauf reicht erst ${covered < 1 ? "weniger als einen Tag" : Math.floor(covered) + (Math.floor(covered) === 1 ? " Tag" : " Tage")} zurück)`;
+      }
+      if (!lines.length) throw new Error("Noch keine Wiedergaben gefunden. Hör ein paar Songs und lade dann noch einmal.");
+      addSeedLines(lines, true); stEl.textContent = msg + ".";
+    } catch (e) { stEl.textContent = e.message; }
+    finally { btn.disabled = false; }
   });
 
-  /* ---------- Last.fm ---------- */
+  /* ---------- Deezer (ohne Schlüssel, per JSONP) ---------- */
   function limiter(conc, gap) {
     let active = 0, last = 0, timer = null; const q = [];
     const next = () => {
@@ -540,135 +610,148 @@ a { color: var(--accent); }
     };
     return (fn) => new Promise((res, rej) => { q.push({ fn, res, rej }); next(); });
   }
-  const lfmQueue = limiter(4, 210);
-  const lfmCache = new Map();
-  async function lfm(method, params) {
-    const key = $("lfmKey").value.trim();
-    const qs = new URLSearchParams({ method, api_key: key, format: "json", autocorrect: "1", ...params });
-    const ck = qs.toString();
-    if (lfmCache.has(ck)) return lfmCache.get(ck);
-    const p = lfmQueue(async () => {
-      const r = await fetch("https://ws.audioscrobbler.com/2.0/?" + ck);
-      const j = await r.json();
-      if (j.error) { const e = new Error(j.message); e.code = j.error; throw e; }
-      return j;
+  let dzN = 0;
+  function dzRaw(path) {
+    return new Promise((res, rej) => {
+      const cb = "__dz" + (++dzN) + "_" + Date.now().toString(36);
+      const s = document.createElement("script");
+      const done = () => { clearTimeout(timer); try { delete window[cb]; } catch { window[cb] = undefined; } s.remove(); };
+      const timer = setTimeout(() => { done(); rej(new Error("Deezer antwortet nicht.")); }, 12000);
+      window[cb] = (j) => { done(); res(j); };
+      s.onerror = () => { done(); rej(new Error("Deezer ist nicht erreichbar.")); };
+      s.src = "https://api.deezer.com" + path + (path.includes("?") ? "&" : "?") + "output=jsonp&callback=" + cb;
+      document.head.append(s);
     });
-    lfmCache.set(ck, p);
-    p.catch(() => lfmCache.delete(ck));
+  }
+  const dzQueue = limiter(6, 115);
+  const dzCache = new Map();
+  function dz(path) {
+    if (dzCache.has(path)) return dzCache.get(path);
+    const p = dzQueue(async () => {
+      for (let a = 0; a < 3; a++) {
+        const j = await dzRaw(path);
+        if (j && j.error) {
+          if (+j.error.code === 4) { await sleep(5200); continue; } // Kontingent: 50 Anfragen / 5 s
+          if (+j.error.code === 800) return null; // nicht gefunden
+          throw new Error("Deezer: " + (j.error.message || "Fehler"));
+        }
+        return j;
+      }
+      throw new Error("Deezer: gerade zu viele Anfragen.");
+    });
+    dzCache.set(path, p);
+    p.catch(() => dzCache.delete(path));
     return p;
   }
-  const safe = (p) => p.catch((e) => { if (e.code === 10 || e.code === 26) throw e; return null; });
-  const artistInfoCache = new Map();
-  function artistInfo(name) {
-    const k = norm(name);
-    if (!artistInfoCache.has(k)) artistInfoCache.set(k, safe(lfm("artist.getInfo", { artist: name })).then((j) => {
-      const a = j?.artist; if (!a) return null;
-      const listeners = +a.stats?.listeners || 0, playcount = +a.stats?.playcount || 0;
-      return { name: a.name, listeners, playcount, ppl: listeners ? playcount / listeners : 0, tags: (a.tags?.tag || []).map((t) => t.name).slice(0, 5) };
-    }));
-    return artistInfoCache.get(k);
-  }
+  const safeDz = (path) => dz(path).catch(() => null);
   const firstArtist = (a) => String(a || "").split(/,\s*|\s+&\s+|\s+(?:feat\.?|ft\.?|x)\s+/i)[0].trim();
+  async function findArtist(name, strict) {
+    const j = await (strict ? dz : safeDz)(`/search/artist?q=${encodeURIComponent(name)}&limit=5`);
+    const list = j?.data || [];
+    if (!list.length) return null;
+    const exact = list.find((x) => norm(x.name) === norm(name));
+    const a = exact || list[0];
+    return { id: a.id, name: a.name, fans: +a.nb_fan || 0 };
+  }
 
-  async function engineLastfm(seeds, o) {
-    if (!$("lfmKey").value.trim()) throw new Error("Für die Analyse fehlt der Last.fm API-Key (Schritt 2).");
+  async function engineDeezer(seeds, o) {
     const withArtist = seeds.filter((s) => s.artist);
     if (!withArtist.length) throw new Error("Bei keinem Song ist ein Künstler angegeben. Schreib die Songs als „Titel – Künstler“.");
 
-    // A: Künstlerprofil
+    // A: deine Künstler und wie bekannt sie sind
     const artW = new Map();
     withArtist.forEach((s) => { const a = firstArtist(s.artist); const k = norm(a); const cur = artW.get(k) || { name: a, w: 0 }; cur.w += s.w; artW.set(k, cur); });
-    const seedArtists = [...artW.values()].sort((a, b) => b.w - a.w);
+    const seedArtists = [...artW.values()].sort((a, b) => b.w - a.w).slice(0, 25);
     const maxAW = seedArtists[0].w;
     seedArtists.forEach((a) => (a.wn = a.w / maxAW));
-    log(`Künstlerprofile: ${Math.min(25, seedArtists.length)} Künstler bei Last.fm nachschlagen`);
-    const infos = await Promise.all(seedArtists.slice(0, 25).map(async (a) => ({ ...a, info: await artistInfo(a.name) })));
-    let sw = 0, sLog = 0, sPpl = 0; const tagW = new Map();
-    infos.forEach((a) => {
-      if (!a.info?.listeners) return;
-      sw += a.w; sLog += a.w * Math.log10(a.info.listeners); sPpl += a.w * a.info.ppl;
-      a.info.tags.forEach((t, i) => tagW.set(t.toLowerCase(), (tagW.get(t.toLowerCase()) || 0) + a.w * (1 - i * 0.15)));
-    });
-    if (!sw) throw new Error("Last.fm kennt keinen deiner Künstler. Prüfe die Schreibweise in der Liste.");
-    const userLog = sLog / sw, userPpl = sPpl / sw;
-    const knownArtists = new Set(seedArtists.map((a) => norm(a.name)));
-    const seedKeys = new Set(seeds.map((s) => keyOf(s.title, firstArtist(s.artist))));
-    seeds.forEach((s) => seedKeys.add(keyOf(s.title, s.artist)));
+    log(`Deezer: ${seedArtists.length} deiner Künstler nachschlagen`);
+    try { seedArtists[0].dz = await findArtist(seedArtists[0].name, true); }
+    catch { throw new Error("Deezer ist nicht erreichbar. Prüfe die Internetverbindung und ob ein Werbeblocker api.deezer.com sperrt."); }
+    await Promise.all(seedArtists.slice(1).map(async (a) => { a.dz = await findArtist(a.name); }));
+    const found = seedArtists.filter((a) => a.dz);
+    if (!found.length) throw new Error("Deezer kennt keinen deiner Künstler. Prüfe die Schreibweise in der Liste.");
+    const fans = new Map(found.map((a) => [a.dz.id, a.dz.fans]));
+    let sw = 0, sLog = 0;
+    found.forEach((a) => { if (a.dz.fans > 0) { sw += a.w; sLog += a.w * Math.log10(a.dz.fans); } });
+    const userLog = sw ? sLog / sw : 5;
+    const knownIds = new Set(found.map((a) => a.dz.id));
+    const knownNames = new Set(seedArtists.map((a) => norm(a.name)));
+    const seedKeys = new Set();
+    seeds.forEach((s) => { seedKeys.add(keyOf(s.title, s.artist)); seedKeys.add(keyOf(s.title, firstArtist(s.artist))); });
 
     const cand = new Map();
-    const add = (title, artist, sim, from, kind) => {
+    const add = (t, sim, from) => {
+      if (!t || !t.title || !t.artist) return;
+      if (t.type && t.type !== "track") return;
+      const title = t.title_short || t.title, artist = t.artist.name;
       const k = keyOf(title, artist);
       if (seedKeys.has(k)) return;
-      const c = cand.get(k) || { title, artist, sim: 0, from: [], kind, key: k };
+      const c = cand.get(k) || { title, artist, artistId: t.artist.id, rank: +t.rank || 0, isrc: t.isrc || "", dzLink: t.link || "", sim: 0, from: [], key: k };
       c.sim += sim; if (from && !c.from.includes(from)) c.from.push(from);
-      if (kind === "track") c.kind = "track";
       cand.set(k, c);
     };
 
-    // B: ähnliche Songs
-    const topSeeds = [...withArtist].sort((a, b) => b.w - a.w).slice(0, 20);
-    log(`Ähnliche Songs zu ${topSeeds.length} deiner Lieblingssongs suchen`);
-    let done = 0;
-    await Promise.all(topSeeds.map(async (s) => {
-      const j = await safe(lfm("track.getSimilar", { artist: firstArtist(s.artist), track: s.title, limit: "30" }));
-      (j?.similartracks?.track || []).forEach((t) => add(t.name, t.artist?.name, (+t.match || 0) * s.w, `„${s.title}“`, "track"));
-      if (++done % 5 === 0) log(`… ${done}/${topSeeds.length} Songs verglichen`);
+    // B: ähnliche Songs aus den Künstler-Mixen
+    const radioFrom = found.slice(0, 10);
+    log(`Ähnliche Songs aus den Mixen von ${radioFrom.length} Künstlern sammeln`);
+    await Promise.all(radioFrom.map(async (a) => {
+      const j = await safeDz(`/artist/${a.dz.id}/radio?limit=40`);
+      (j?.data || []).forEach((t, i) => add(t, a.wn * (1 - i * 0.012), `Mix zu ${a.dz.name}`));
     }));
 
-    // C: ähnliche Künstler + Top-Songs
-    const simArt = new Map();
+    // C: ähnliche Künstler und ihre bekanntesten Songs
     log("Ähnliche Künstler bestimmen");
-    await Promise.all(seedArtists.slice(0, 8).map(async (a) => {
-      const j = await safe(lfm("artist.getSimilar", { artist: a.name, limit: "15" }));
-      (j?.similarartists?.artist || []).forEach((x) => {
-        const k = norm(x.name); if (knownArtists.has(k)) return;
-        const cur = simArt.get(k) || { name: x.name, s: 0, via: a.name };
-        cur.s += (+x.match || 0) * a.wn; simArt.set(k, cur);
+    const rel = new Map();
+    await Promise.all(found.slice(0, 10).map(async (a) => {
+      const j = await safeDz(`/artist/${a.dz.id}/related?limit=20`);
+      (j?.data || []).forEach((x, i) => {
+        if (knownIds.has(x.id) || knownNames.has(norm(x.name))) return;
+        if (x.nb_fan != null) fans.set(x.id, +x.nb_fan || 0);
+        const c = rel.get(x.id) || { id: x.id, name: x.name, s: 0, via: a.dz.name };
+        c.s += a.wn * (1 - i * 0.035); rel.set(x.id, c);
       });
     }));
-    const simList = [...simArt.values()].sort((a, b) => b.s - a.s);
-    const maxS = simList[0]?.s || 1;
-    log(`Top-Songs von ${Math.min(12, simList.length)} ähnlichen und ${Math.min(6, seedArtists.length)} deiner Künstler laden`);
+    const relList = [...rel.values()].sort((a, b) => b.s - a.s);
+    const maxR = relList[0]?.s || 1;
+    log(`Top-Songs von ${Math.min(14, relList.length)} ähnlichen und ${Math.min(6, found.length)} deiner Künstler laden`);
     await Promise.all([
-      ...simList.slice(0, 12).map(async (a) => {
-        const j = await safe(lfm("artist.getTopTracks", { artist: a.name, limit: "5" }));
-        (j?.toptracks?.track || []).forEach((t, i) => add(t.name, a.name, 0.45 * (a.s / maxS) * (1 - i * 0.12), `ähnlich wie ${a.via}`, "artist"));
+      ...relList.slice(0, 14).map(async (r) => {
+        const j = await safeDz(`/artist/${r.id}/top?limit=5`);
+        (j?.data || []).forEach((t, i) => add(t, 0.7 * (r.s / maxR) * (1 - i * 0.1), `ähnlich wie ${r.via}`));
       }),
-      ...seedArtists.slice(0, 6).map(async (a) => {
-        const j = await safe(lfm("artist.getTopTracks", { artist: a.name, limit: "10" }));
-        (j?.toptracks?.track || []).forEach((t, i) => add(t.name, a.name, 0.35 * a.wn * (1 - i * 0.07), `mehr von ${a.name}`, "own"));
+      ...found.slice(0, 6).map(async (a) => {
+        const j = await safeDz(`/artist/${a.dz.id}/top?limit=10`);
+        (j?.data || []).forEach((t, i) => add(t, 0.45 * a.wn * (1 - i * 0.06), `mehr von ${a.dz.name}`));
       })
     ]);
-    if (!cand.size) throw new Error("Last.fm hat keine ähnlichen Songs gefunden. Ergänze ein paar bekanntere Songs.");
+    if (!cand.size) throw new Error("Deezer hat keine ähnlichen Songs gefunden. Ergänze ein paar bekanntere Songs.");
 
-    // D: Bekanntheit & Hörtiefe abgleichen
+    // D: Bekanntheit abgleichen und bewerten
     let list = [...cand.values()];
     const maxSim = Math.max(...list.map((c) => c.sim));
     list.forEach((c) => (c.simN = c.sim / maxSim));
     list.sort((a, b) => b.simN - a.simN);
     list = list.slice(0, Math.max(90, o.len * 3));
-    const candArtists = [...new Set(list.map((c) => c.artist))];
-    log(`Hörerzahlen von ${candArtists.length} Künstlern vergleichen`);
-    await Promise.all(candArtists.map((a) => artistInfo(a)));
+    const missing = [...new Set(list.map((c) => c.artistId).filter((id) => id && !fans.has(id)))].slice(0, 60);
+    if (missing.length) log(`Fan-Zahlen von ${missing.length} weiteren Künstlern abfragen`);
+    await Promise.all(missing.map(async (id) => { const j = await safeDz(`/artist/${id}`); fans.set(id, +j?.nb_fan || 0); }));
     const target = userLog + ((o.pop - 50) / 50) * 1.0;
     const disc = o.disc / 100;
-    for (const c of list) {
-      const inf = await artistInfo(c.artist);
-      c.listeners = inf?.listeners || 0; c.ppl = inf?.ppl || 0;
-      const popFit = c.listeners ? Math.exp(-((Math.log10(c.listeners) - target) ** 2) / (2 * 0.6 ** 2)) : 0.4;
-      const pplFit = c.ppl && userPpl ? Math.exp(-(Math.log(c.ppl / userPpl) ** 2) / (2 * 0.5 ** 2)) : 0.5;
-      c.fit = 0.75 * popFit + 0.25 * pplFit;
-      c.known = knownArtists.has(norm(c.artist));
+    list.forEach((c) => {
+      c.listeners = fans.get(c.artistId) || 0;
+      c.fit = c.listeners ? Math.exp(-((Math.log10(c.listeners) - target) ** 2) / (2 * 0.6 ** 2)) : 0.4;
+      c.known = knownIds.has(c.artistId) || knownNames.has(norm(c.artist));
       const novelty = c.known ? 1 - disc : disc;
-      c.score = 0.5 * c.simN + 0.3 * c.fit + 0.2 * novelty;
-    }
-    const topTags = [...tagW.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map((x) => x[0]);
+      const hit = c.rank ? Math.min(1, Math.log10(c.rank) / 6) : 0.5;
+      c.score = 0.5 * c.simN + 0.28 * c.fit + 0.17 * novelty + 0.05 * hit;
+    });
     return {
-      engine: "lastfm",
+      engine: "deezer",
       candidates: list,
       profile: {
-        avgListeners: Math.round(10 ** userLog), avgPpl: userPpl, tags: topTags,
-        artists: infos.filter((a) => a.info?.listeners).slice(0, 6).map((a) => ({ name: a.info.name, w: a.wn, listeners: a.info.listeners, ppl: a.info.ppl }))
+        avgListeners: Math.round(10 ** userLog),
+        artists: found.slice(0, 6).map((a) => ({ name: a.dz.name, w: a.wn, listeners: a.dz.fans })),
+        tags: []
       }
     };
   }
@@ -759,6 +842,7 @@ Antworte nur mit JSON in genau dieser Form:
     if (!current) { R.innerHTML = `<div class="empty">Noch kein Mix.</div>`; return; }
     const { tracks, profile, engine, example } = current;
     const est = engine === "claude" ? " (geschätzt)" : "";
+    const unit = engine === "deezer" ? "Deezer-Fans" : "Hörer";
     const known = tracks.filter((t) => t.known).length;
     const avgSim = tracks.length ? Math.round(100 * tracks.reduce((s, t) => s + t.simN, 0) / tracks.length) : 0;
     const maxL = Math.max(1, ...(profile.artists || []).map((a) => a.listeners || 0));
@@ -766,16 +850,16 @@ Antworte nur mit JSON in genau dieser Form:
       <div class="res-head">
         ${example ? `<span class="tag-example">Beispiel – so sieht dein Ergebnis aus</span>` : ""}
         <h2>Wochenmix ${WEEK_LABEL}</h2>
-        <div class="meta"><span>${RANGE}</span><span>${tracks.length} Songs</span><span>${tracks.length - known} neue · ${known} vertraute Künstler</span><span>Ø Ähnlichkeit ${avgSim} %</span><span>Quelle: ${engine === "claude" ? "Claude-Schätzung" : engine === "lastfm" ? "Last.fm-Hördaten" : "Beispiel"}</span></div>
+        <div class="meta"><span>${RANGE}</span><span>${tracks.length} Songs</span><span>${tracks.length - known} neue · ${known} vertraute Künstler</span><span>Ø Ähnlichkeit ${avgSim} %</span><span>Quelle: ${engine === "claude" ? "Claude-Schätzung" : engine === "deezer" ? "Deezer-Daten" : "Beispiel"}</span></div>
       </div>
       ${profile ? `<div class="profile">
-        <div class="stat"><h3>Dein Profil</h3>${profile.avgListeners ? `<b>${fmtN(profile.avgListeners)}</b><span>Hörer pro Künstler im Schnitt${est}</span>` : `<span>Hier erscheinen die durchschnittlichen Hörerzahlen deiner Künstler.</span>`}
+        <div class="stat"><h3>Dein Profil</h3>${profile.avgListeners ? `<b>${fmtN(profile.avgListeners)}</b><span>${unit} pro Künstler im Schnitt${est}</span>` : `<span>Hier erscheint, wie viele Fans deine Künstler im Schnitt haben.</span>`}
           ${profile.avgPpl ? `<div style="margin-top:8px"><b>${profile.avgPpl.toLocaleString("de-CH", { maximumFractionDigits: 1 })}×</b><span>Wiedergaben pro Hörer – so treu sind die Fans deiner Künstler</span></div>` : ""}
         </div>
-        ${profile.artists?.length ? `<div><h3>Deine Künstler · Hörer${est}</h3><div class="bars">${profile.artists.map((a) => `
+        ${profile.artists?.length ? `<div><h3>Deine Künstler · ${unit}${est}</h3><div class="bars">${profile.artists.map((a) => `
           <div class="bar"><span class="n">${esc(a.name)}</span><span class="track"><i style="width:${Math.max(4, 100 * (a.listeners || 0) / maxL)}%"></i></span>
           <span class="v"><span>${fmtN(a.listeners)}</span><span>${a.ppl ? a.ppl.toFixed(1) + "× / Hörer" : a.treue ? "Treue: " + esc(a.treue) : ""}</span></span></div>`).join("")}</div></div>` : ""}
-        <div><h3>Stil</h3>${profile.text ? `<p style="margin-bottom:8px">${esc(profile.text)}</p>` : ""}<div class="chips">${(profile.tags || []).map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div></div>
+        ${profile.text || profile.tags?.length ? `<div><h3>Stil</h3>${profile.text ? `<p style="margin-bottom:8px">${esc(profile.text)}</p>` : ""}<div class="chips">${(profile.tags || []).map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div></div>` : ""}
       </div>` : ""}
       <ol class="tracks">${tracks.map((t, i) => `
         <li>
@@ -785,7 +869,7 @@ Antworte nur mit JSON in genau dieser Form:
             <div class="t-artist">${esc(t.artist)}</div>
             <div class="t-why"><span class="pill ${t.known ? "known" : "new"}">${t.known ? "Vertraut" : "Neu"}</span>${t.spMissing ? `<span class="pill miss">Nicht auf Spotify gefunden</span>` : ""}
               <span>${esc(t.reason || (t.from?.length ? (t.from[0].startsWith("„") ? "ähnlich wie " : "") + t.from[0] + (t.from.length > 1 ? ` +${t.from.length - 1}` : "") : ""))}</span>
-              ${t.listeners ? `<span>· ${fmtN(t.listeners)} Hörer${t.estimated ? " (geschätzt)" : ""}</span>` : ""}</div>
+              ${t.listeners ? `<span>· ${fmtN(t.listeners)} ${engine === "deezer" ? "Fans" : "Hörer"}${t.estimated ? " (geschätzt)" : ""}</span>` : ""}</div>
           </div>
           <div class="t-side"><span title="Ähnlichkeit zu deinen Songs">${Math.round(t.simN * 100)} %</span><span class="meter" aria-hidden="true"><i style="width:${Math.round(t.simN * 100)}%"></i></span>
             <a href="${t.spUrl || searchUrl(t)}" target="_blank" rel="noopener">${t.spUrl ? "Öffnen" : "Auf Spotify suchen"}</a></div>
@@ -830,8 +914,9 @@ Antworte nur mit JSON in genau dieser Form:
       const q = limiter(3, 120); let n = 0;
       await Promise.all(current.tracks.map((t) => q(async () => {
         const query = `track:${t.title.replace(/["']/g, "")} artist:${firstArtist(t.artist).replace(/["']/g, "")}`;
-        let j = await sp(`/search?type=track&limit=5&q=${encodeURIComponent(query)}`);
+        let j = t.isrc ? await sp(`/search?type=track&limit=1&q=${encodeURIComponent("isrc:" + t.isrc)}`) : null;
         let item = j?.tracks?.items?.[0];
+        if (!item) { j = await sp(`/search?type=track&limit=5&q=${encodeURIComponent(query)}`); item = j?.tracks?.items?.[0]; }
         if (!item) { j = await sp(`/search?type=track&limit=5&q=${encodeURIComponent(t.title + " " + firstArtist(t.artist))}`); item = j?.tracks?.items?.[0]; }
         t.spUri = item?.uri || null; t.spUrl = item?.external_urls?.spotify || null; t.spMissing = !item;
         st.textContent = `Songs auf Spotify suchen … ${++n}/${current.tracks.length}`;
@@ -869,8 +954,8 @@ Antworte nur mit JSON in genau dieser Form:
     try {
       let result;
       if (STANDALONE) {
-        log(`Analyse von ${seeds.length} Songs über Last.fm`);
-        result = await engineLastfm(seeds, o);
+        log(`Analyse von ${seeds.length} Songs über Deezer`);
+        result = await engineDeezer(seeds, o);
         if (reshuffle) result.candidates.forEach((c) => (c.score *= 0.85 + Math.random() * 0.3));
       } else {
         log(`Claude analysiert ${seeds.length} Songs – das dauert meist 30–90 Sekunden`);
@@ -928,13 +1013,13 @@ Antworte nur mit JSON in genau dieser Form:
   let maxImages = 4;
   function modeUi() {
     if (STANDALONE) {
-      $("modeText").textContent = "Selbst gehostet · Spotify + Last.fm";
+      $("modeText").textContent = "Selbst gehostet · Spotify + Deezer";
       $("shotHint").textContent = "Die Texterkennung läuft in deinem Browser. Prüfe danach kurz die Liste – Screenshots sind nicht immer eindeutig.";
-      $("spBlocked").hidden = true; $("spPanel").hidden = false; $("lfmField").hidden = false;
+      $("spBlocked").hidden = true; $("spPanel").hidden = false;
     } else {
       $("modeText").textContent = sample ? "Im Claude-Viewer · Analyse durch Claude" : "Im Claude-Viewer";
-      $("shotHint").textContent = "Claude liest die Songs aus deinen Bildern. Ähnlichkeit und Hörerzahlen schätzt Claude aus seinem Musikwissen; mit Last.fm-Daten rechnet die selbst gehostete Version.";
-      $("spBlocked").hidden = false; $("spPanel").hidden = true; $("lfmField").hidden = true;
+      $("shotHint").textContent = "Claude liest die Songs aus deinen Bildern. Ähnlichkeit und Hörerzahlen schätzt Claude aus seinem Musikwissen. Mit echten Daten von Deezer rechnet die selbst gehostete Version.";
+      $("spBlocked").hidden = false; $("spPanel").hidden = true;
     }
   }
   modeUi();
@@ -947,6 +1032,15 @@ Antworte nur mit JSON in genau dieser Form:
     });
   }
 
-  handleRedirect().finally(() => { spUi(); render(); });
+  handleRedirect().finally(() => {
+    spUi(); render(); histUi();
+    if (STANDALONE && spToken) {
+      collectPlays().catch(() => {});
+      setInterval(() => { if (spToken && document.visibilityState === "visible") collectPlays().catch(() => {}); }, 15 * 60e3);
+      document.addEventListener("visibilitychange", () => {
+        if (spToken && document.visibilityState === "visible" && Date.now() - store.get("lastCollect", 0) > 5 * 60e3) collectPlays().catch(() => {});
+      });
+    }
+  });
 })();
 </script>
