@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Wochenmix</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,6 +38,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -57,8 +63,8 @@ header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-cont
 .hint { color: var(--muted); font-size: 13px; margin: 0; }
 .hint code, .kbd { font-family: var(--f-mono); font-size: 12px; background: var(--sunk); padding: 1px 5px; border-radius: 3px; word-break: break-all; }
 
-.tabs { display: flex; gap: 4px; background: var(--sunk); padding: 4px; border-radius: 6px; }
-.tabs button { flex: 1; border: 0; background: transparent; color: var(--muted); font: 700 13px var(--f-body); padding: 7px 6px; border-radius: 4px; cursor: pointer; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; background: var(--sunk); padding: 4px; border-radius: 6px; }
+.tabs button { flex: 1 1 auto; border: 0; background: transparent; color: var(--muted); font: 700 13px var(--f-body); padding: 7px 6px; border-radius: 4px; cursor: pointer; }
 .tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 0 var(--line); }
 .panel { display: grid; gap: 10px; }
 
@@ -70,7 +76,7 @@ header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-cont
 
 label.field { display: grid; gap: 4px; font-size: 13px; font-weight: 700; }
 label.field small { font-weight: 400; color: var(--muted); }
-input[type="text"], input[type="password"], textarea, select {
+input[type="text"], input[type="password"], input[type="date"], textarea, select {
   width: 100%; font: 14px var(--f-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px;
 }
 textarea { font-family: var(--f-mono); font-size: 12.5px; line-height: 1.6; min-height: 190px; resize: vertical; }
@@ -138,7 +144,7 @@ ol.tracks > li:last-child { border-bottom: 0; }
 .part span:last-child { font-family: var(--f-mono); font-size: 11.5px; text-align: right; color: var(--muted); }
 @media (max-width: 560px) {
   .trow { grid-template-columns: 30px minmax(0, 1fr); }
-  .t-side { grid-column: 2; justify-items: start; grid-auto-flow: column; align-items: center; gap: 10px; }
+  .t-side { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
   .pos { font-size: 22px; }
   .detail { padding-left: 16px; }
   .part { grid-template-columns: 104px minmax(0, 1fr) 48px; }
@@ -173,6 +179,17 @@ ol.tracks > li:last-child { border-bottom: 0; }
 .addfam { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .addfam select { width: auto; min-width: 180px; flex: 1 1 180px; max-width: 280px; }
 
+.gchips { display: grid; gap: 6px; }
+.gchip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; background: var(--bg); }
+.gchip b { font-size: 14px; }
+.gchip > span:not(.seg) { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.gchip[data-pref="-2"] { border-color: var(--warn); }
+.gchip .seg.mini { display: inline-grid; grid-template-columns: repeat(3, auto); margin-left: auto; }
+.gchip .seg.mini button { padding: 3px 8px; }
+.gchip .seg.mini button[data-v="-2"][aria-pressed="true"] { background: var(--warn); color: #fff; }
+.gx { border: 0; background: none; color: var(--muted); font-size: 14px; cursor: pointer; padding: 2px 4px; }
+.gx:hover { color: var(--warn); }
+#gSearch { flex: 1 1 200px; width: auto; }
 /* Nische */
 .niche { display: grid; gap: 14px; padding: 14px 16px 16px; }
 .idx { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 18px; align-items: center; }
@@ -237,7 +254,8 @@ a { color: var(--accent); }
       <section class="step" aria-labelledby="s1">
         <h2 id="s1"><span>1</span>Hördaten</h2>
         <div class="tabs" role="tablist">
-          <button role="tab" id="tab-sp" aria-selected="true" data-panel="p-sp">Spotify-Konto</button>
+          <button role="tab" id="tab-sp" aria-selected="true" data-panel="p-sp">Spotify</button>
+          <button role="tab" id="tab-exp" aria-selected="false" data-panel="p-exp">Datenexport</button>
           <button role="tab" id="tab-shot" aria-selected="false" data-panel="p-shot">Screenshot</button>
           <button role="tab" id="tab-man" aria-selected="false" data-panel="p-man">Von Hand</button>
         </div>
@@ -278,6 +296,44 @@ a { color: var(--accent); }
           <p class="hint" id="shotHint"></p>
         </div>
 
+        <div class="panel" id="p-exp" hidden>
+          <details class="help" id="expHelp" open>
+            <summary>So bekommst du die Datei von Apple Music</summary>
+            <ol>
+              <li>Am Computer auf privacy.apple.com anmelden und „Kopie deiner Daten anfordern“ wählen.</li>
+              <li>„Apple Media Services information“ ankreuzen und die Anfrage abschliessen. Das kostet nichts.</li>
+              <li>Nach bis zu 7 Tagen kommt eine E-Mail. Danach hast du 14 Tage Zeit zum Herunterladen.</li>
+              <li>Im ZIP unter <span class="kbd">Apple_Media_Services › Apple Music Activity</span> die Datei <span class="kbd">Apple Music - Play History Daily Tracks.csv</span> hier ablegen. Das ganze ZIP geht auch, ist aber langsamer.</li>
+            </ol>
+            <p class="hint">Auch Spotifys „erweiterter Streaming-Verlauf“ (Dateien <span class="kbd">Streaming_History_Audio_….json</span>, anzufordern unter spotify.com › Konto › Datenschutz) funktioniert hier.</p>
+          </details>
+          <div class="drop" id="expDrop" tabindex="0" role="button" aria-label="Exportdatei auswählen">
+            <strong>Exportdatei hier ablegen oder antippen</strong>
+            <span>CSV, ZIP oder Spotify-JSON. Die Datei wird nur in deinem Browser gelesen.</span>
+          </div>
+          <input type="file" id="expInput" accept=".csv,.zip,.json,text/csv,application/zip,application/json" multiple hidden>
+          <span class="status" id="expStatus"></span>
+          <div class="panel" id="expRange" hidden>
+            <p class="note" id="expInfo"></p>
+            <label class="field">Zeitraum
+              <select id="expPreset">
+                <option value="7">Letzte 7 Tage im Export</option>
+                <option value="28">Letzte 4 Wochen im Export</option>
+                <option value="91">Letzte 3 Monate im Export</option>
+                <option value="365">Letztes Jahr im Export</option>
+                <option value="all">Gesamter Export</option>
+                <option value="custom">Eigener Zeitraum</option>
+              </select>
+            </label>
+            <div class="row" id="expCustom" hidden>
+              <label class="field" style="flex:1 1 140px">Von <input type="date" id="expFrom"></label>
+              <label class="field" style="flex:1 1 140px">Bis <input type="date" id="expTo"></label>
+            </div>
+            <p class="hint" id="expPreview"></p>
+            <div class="row"><button class="btn primary" id="expUse">Top 50 übernehmen</button><button class="btn" id="expClear">Export entfernen</button></div>
+          </div>
+        </div>
+
         <div class="panel" id="p-man" hidden>
           <p class="hint">Schreib deine Songs direkt in die Liste unten.</p>
         </div>
@@ -308,7 +364,7 @@ a { color: var(--accent); }
           <select id="maxPer"><option value="1">1 Song</option><option value="2" selected>2 Songs</option><option value="3">3 Songs</option></select>
         </label>
         <label class="check"><input type="checkbox" id="noRepeat" checked> Songs aus den Wochenmixes der letzten 4 Wochen weglassen</label>
-        <p class="hint">Genres und Klang stellst du nach dem Erstellen rechts im Feinschliff ein.</p>
+        <p class="hint">Genres (auch Nischen wie „breakcore“) und Klang stellst du nach dem Erstellen im Feinschliff ein.</p>
       </section>
 
       <section class="step" aria-labelledby="s3">
@@ -389,10 +445,10 @@ a { color: var(--accent); }
     { id: "dnb", label: "Drum & Bass", tag: "drum and bass", re: /drum.?(and|n|&|'n'|’n’).?bass|\bdnb\b|\bd&b\b|jungle|liquid funk|neurofunk|jump.?up/ },
     { id: "metal", label: "Metal", tag: "metal", re: /metal|deathcore|djent|thrash|grindcore|\bdoom\b|sludge|black metal/ },
     { id: "punk", label: "Punk", tag: "punk", re: /punk|\bemo\b|post-hardcore|hardcore punk|\bska\b|oi!/ },
-    { id: "hiphop", label: "Hip-Hop & Rap", tag: "hip hop", re: /hip.?hop|\brap\b|rapper|\btrap\b|grime|\bdrill\b|boom bap|gangsta/ },
+    { id: "hiphop", label: "Hip-Hop & Rap", tag: "hip hop", re: /hip.?hop|\brap\b|rapper|\btrap\b|grime|\bdrill\b|boom bap|gangsta|phonk|memphis|deutschrap|horrorcore/ },
     { id: "house", label: "House & Techno", tag: "techno", re: /house|techno|trance|\bminimal\b|uk garage|\bgarage\b(?! rock)|hardstyle|\bdisco\b|nu.?disco/ },
     { id: "ambient", label: "Ambient & Chill", tag: "ambient", re: /ambient|chill|lo.?fi|new age|downtempo|trip.?hop|chillwave|drone/ },
-    { id: "electro", label: "Elektronisch", tag: "electronic", re: /electro|electronic|\bedm\b|synth|dubstep|bass music|\bidm\b|electronica|breakbeat|\bdance\b|future bass|glitch|big beat|eurodance|dance-pop/ },
+    { id: "electro", label: "Elektronisch", tag: "electronic", re: /electro|electronic|\bedm\b|synth|dubstep|bass music|\bidm\b|electronica|breakbeat|breakcore|hyperpop|digicore|glitch|vaporwave|chiptune|bitpop|footwork|\bjuke\b|jersey club|nightcore|\bdance\b|future bass|big beat|eurodance|dance-pop|riddim|gabber|hardcore techno|frenchcore|happy hardcore/ },
     { id: "classic", label: "Klassik & Film", tag: "classical", re: /classical|orchestral|soundtrack|\bscore\b|neoclassical|baroque|opera|piano/ },
     { id: "jazz", label: "Jazz & Blues", tag: "jazz", re: /jazz|blues|swing|bossa|bebop/ },
     { id: "rnb", label: "R&B, Soul & Funk", tag: "soul", re: /r&b|\brnb\b|rhythm and blues|soul|funk|motown|neo.?soul/ },
@@ -403,13 +459,13 @@ a { color: var(--accent); }
     { id: "pop", label: "Pop", tag: "pop", re: /\bpop\b|k-pop|j-pop|schlager|teen pop|europop/ }
   ];
   const FAM = Object.fromEntries(FAMS.map((f) => [f.id, f]));
+  const JUNK = /^(seen live|favou?rites?|my favou?rites?|love|awesome|beautiful|cool|great|amazing|all|spotify|under \d+.*|male vocalists?|female vocalists?|vocalists?|singer|composer|producer|dj|band|duo|group|instrumental|soundtrack composer|\d{2}s|\d{4}s?|british|american|english|german|swiss|french|canadian|australian|swedish|norwegian|japanese|korean|uk|usa|us|europe|european|london|berlin|new york|los angeles|california|deutsch|deutschland|schweiz|check out|to check|good|bad|best)$/;
   function classify(tags) { // tags: [{n, c}]
     const fw = {}, used = [];
-    tags.filter((t) => t.c > 0).sort((a, b) => b.c - a.c).forEach((t) => {
+    tags.filter((t) => t.c > 0 && t.n && t.n.length <= 32 && !JUNK.test(t.n)).sort((a, b) => b.c - a.c).forEach((t) => {
       const f = FAMS.find((x) => x.re.test(t.n));
-      if (!f) return;
-      fw[f.id] = (fw[f.id] || 0) + t.c;
-      if (used.length < 4 && !used.includes(t.n)) used.push(t.n);
+      if (f) fw[f.id] = (fw[f.id] || 0) + t.c;
+      if (used.length < 8 && !used.includes(t.n) && (f || used.length < 6)) used.push(t.n);
     });
     const sum = Object.values(fw).reduce((s, v) => s + v, 0);
     if (sum) for (const k in fw) fw[k] = fw[k] / sum;
@@ -565,10 +621,10 @@ a { color: var(--accent); }
       status.textContent = sampleErr(e);
     } finally { btn.disabled = !shots.length; }
   });
-  function loadScript(src) {
+  function loadScript(src, what = "Die Texterkennung") {
     return new Promise((res, rej) => {
       if ([...document.scripts].some((s) => s.src === src)) return res();
-      const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Die Texterkennung konnte nicht geladen werden. Prüfe die Internetverbindung."));
+      const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error(what + " konnte nicht geladen werden. Prüfe die Internetverbindung."));
       document.head.append(s);
     });
   }
@@ -587,6 +643,179 @@ a { color: var(--accent); }
     }
     return out;
   }
+
+  /* ---------- Datenexport (Apple Music / Spotify) ---------- */
+  let exp = null; // { rows: [{d, a, t, c, ms}], src }
+  const expDrop = $("expDrop"), expInput = $("expInput");
+  expDrop.addEventListener("click", () => expInput.click());
+  expDrop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); expInput.click(); } });
+  ["dragenter", "dragover"].forEach((t) => expDrop.addEventListener(t, (e) => { e.preventDefault(); expDrop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((t) => expDrop.addEventListener(t, (e) => { e.preventDefault(); expDrop.classList.remove("over"); }));
+  expDrop.addEventListener("drop", (e) => importFiles([...e.dataTransfer.files]));
+  expInput.addEventListener("change", () => { importFiles([...expInput.files]); expInput.value = ""; });
+
+  function csvEach(text, onRow) {
+    let i = text.charCodeAt(0) === 0xFEFF ? 1 : 0;
+    const n = text.length; let row = [], q = false, start = i, buf = "";
+    for (; i < n; i++) {
+      const ch = text.charCodeAt(i);
+      if (q) {
+        if (ch === 34) { if (text.charCodeAt(i + 1) === 34) { buf += text.slice(start, i + 1); i++; start = i + 1; } else { buf += text.slice(start, i); q = false; start = i + 1; } }
+      } else if (ch === 34) { buf += text.slice(start, i); q = true; start = i + 1; }
+      else if (ch === 44) { row.push(buf + text.slice(start, i)); buf = ""; start = i + 1; }
+      else if (ch === 10 || ch === 13) {
+        row.push(buf + text.slice(start, i)); buf = "";
+        if (ch === 13 && text.charCodeAt(i + 1) === 10) i++;
+        start = i + 1;
+        if (row.length > 1 || row[0]) onRow(row);
+        row = [];
+      }
+    }
+    if (start < n || buf || row.length) { row.push(buf + text.slice(start, n)); if (row.length > 1 || row[0]) onRow(row); }
+  }
+  const dayOf = (s) => { s = String(s || "").trim(); if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`; const m = s.match(/^(\d{4}-\d{2}-\d{2})/); return m ? m[1] : null; };
+  function parseAppleCsv(text) {
+    let head = null, idx = {}, mode = null; const rows = [];
+    csvEach(text, (r) => {
+      if (!head) {
+        head = r.map((x) => x.trim());
+        const f = (...names) => { for (const nm of names) { const k = head.indexOf(nm); if (k >= 0) return k; } return -1; };
+        idx = { desc: f("Track Description"), date: f("Date Played"), cnt: f("Play Count"), ms: f("Play Duration Milliseconds"),
+          song: f("Song Name", "Content Name"), artist: f("Artist Name", "Container Artist Name"), ts: f("Event Start Timestamp", "Event Received Timestamp", "Event Timestamp") };
+        if (idx.desc >= 0 && idx.date >= 0) mode = "daily";
+        else if (idx.song >= 0 && idx.artist >= 0 && idx.ts >= 0) mode = "activity";
+        else if (idx.song >= 0) throw new Error("In dieser Datei fehlen die Künstlernamen. Nimm „Apple Music - Play History Daily Tracks.csv“ aus dem Ordner „Apple Music Activity“.");
+        else throw new Error("Diese CSV-Datei kenne ich nicht. Nimm „Apple Music - Play History Daily Tracks.csv“ aus dem Ordner „Apple Music Activity“.");
+        return;
+      }
+      if (mode === "daily") {
+        const d = dayOf(r[idx.date]); const desc = (r[idx.desc] || "").trim();
+        const c = idx.cnt >= 0 ? +r[idx.cnt] || 0 : 1;
+        if (!d || !desc || c <= 0) return;
+        const k = desc.indexOf(" - ");
+        rows.push({ d, a: k > 0 ? desc.slice(0, k).trim() : "", t: k > 0 ? desc.slice(k + 3).trim() : desc, c, ms: idx.ms >= 0 ? +r[idx.ms] || 0 : 0 });
+      } else {
+        const d = dayOf(r[idx.ts]); const t = (r[idx.song] || "").trim(); const a = (r[idx.artist] || "").trim();
+        const ms = idx.ms >= 0 ? +r[idx.ms] || 0 : 0;
+        if (!d || !t || (idx.ms >= 0 && ms < 30000)) return;
+        rows.push({ d, a, t, c: 1, ms });
+      }
+    });
+    return rows;
+  }
+  function parseSpotifyJson(text) {
+    let arr; try { arr = JSON.parse(text); } catch { throw new Error("Die JSON-Datei ist beschädigt."); }
+    if (!Array.isArray(arr)) throw new Error("Diese JSON-Datei kenne ich nicht.");
+    const rows = [];
+    arr.forEach((x) => {
+      const t = x.master_metadata_track_name || x.trackName, a = x.master_metadata_album_artist_name || x.artistName;
+      const ms = +(x.ms_played ?? x.msPlayed) || 0; const d = dayOf(x.ts || x.endTime);
+      if (t && a && d && ms >= 30000) rows.push({ d, a, t, c: 1, ms });
+    });
+    if (!rows.length && arr.length) throw new Error("In dieser JSON-Datei stehen keine Songs. Nimm die Dateien „Streaming_History_Audio_….json“.");
+    return rows;
+  }
+  async function rowsFromZip(file, status) {
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js", "Das ZIP-Werkzeug");
+    const out = [];
+    const walk = async (zip, depth) => {
+      const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir);
+      const daily = names.filter((n) => /Play History Daily Tracks\.csv$/i.test(n));
+      const spJson = names.filter((n) => /Streaming_History_(Audio|Music).*\.json$|StreamingHistory\d*\.json$/i.test(n));
+      const act = names.filter((n) => /Play Activity\.csv$/i.test(n));
+      for (const n of daily) { status(`Lese ${n.split("/").pop()} …`); out.push(...parseAppleCsv(await zip.files[n].async("string"))); }
+      for (const n of spJson) { status(`Lese ${n.split("/").pop()} …`); out.push(...parseSpotifyJson(await zip.files[n].async("string"))); }
+      if (!daily.length && !spJson.length) for (const n of act) { status(`Lese ${n.split("/").pop()} …`); try { out.push(...parseAppleCsv(await zip.files[n].async("string"))); } catch {} }
+      if (!out.length && depth < 3) {
+        const inner = names.filter((n) => /\.zip$/i.test(n)).sort((a, b) => (/Apple_Media_Services/i.test(b) ? 1 : 0) - (/Apple_Media_Services/i.test(a) ? 1 : 0));
+        for (const n of inner) { if (out.length) break; status(`Öffne ${n.split("/").pop()} …`); await walk(await window.JSZip.loadAsync(await zip.files[n].async("arraybuffer")), depth + 1); }
+      }
+    };
+    status("ZIP wird geöffnet …");
+    await walk(await window.JSZip.loadAsync(file), 0);
+    if (!out.length) throw new Error("Im ZIP habe ich keinen Hörverlauf gefunden. Gesucht wird „Apple Music - Play History Daily Tracks.csv“ oder „Streaming_History_Audio_….json“.");
+    return out;
+  }
+  async function importFiles(files) {
+    if (!files.length) return;
+    const status = (t) => { $("expStatus").textContent = t; };
+    try {
+      let rows = [], src = new Set();
+      for (const f of files) {
+        if (/\.zip$/i.test(f.name) || f.type === "application/zip") {
+          if (f.size > 600e6) status("Die ZIP-Datei ist sehr gross. Falls der Browser hängen bleibt, lade nur die CSV-Datei hoch.");
+          const r = await rowsFromZip(f, status); rows.push(...r); src.add("zip");
+        } else if (/\.json$/i.test(f.name)) { status(`Lese ${f.name} …`); rows.push(...parseSpotifyJson(await f.text())); src.add("spotify"); }
+        else { status(`Lese ${f.name} …`); rows.push(...parseAppleCsv(await f.text())); src.add("apple"); }
+      }
+      if (!rows.length) throw new Error("In der Datei stehen keine Wiedergaben.");
+      exp = { rows, src: [...src].join("+") };
+      saveExp(); expUi();
+      status(`${files.length > 1 ? files.length + " Dateien" : "Datei"} gelesen.`);
+    } catch (e) { status(e.message || String(e)); }
+  }
+  function saveExp() {
+    try {
+      const table = new Map(), list = [];
+      const rows = exp.rows.map((r) => { const k = r.a + "\u0001" + r.t; let i = table.get(k); if (i == null) { i = list.length; table.set(k, i); list.push([r.a, r.t]); } return [r.d, i, r.c, Math.round(r.ms / 1000)]; });
+      const json = JSON.stringify({ src: exp.src, list, rows });
+      if (json.length < 3.5e6) localStorage.setItem("wm_exp", json); else localStorage.removeItem("wm_exp");
+    } catch {}
+  }
+  function loadExp() {
+    const j = store.get("exp", null);
+    if (!j || !Array.isArray(j.rows)) return;
+    exp = { src: j.src, rows: j.rows.map(([d, i, c, s]) => ({ d, a: j.list[i][0], t: j.list[i][1], c, ms: s * 1000 })) };
+  }
+  const addDays = (iso, n) => { const t = new Date(iso + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+  const fmtIso = (iso) => new Date(iso + "T12:00:00Z").toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
+  function expBounds() { let lo = "9999", hi = "0000"; exp.rows.forEach((r) => { if (r.d < lo) lo = r.d; if (r.d > hi) hi = r.d; }); return { lo, hi }; }
+  function expRangeSel() {
+    const { lo, hi } = expBounds(); const v = $("expPreset").value;
+    if (v === "all") return { from: lo, to: hi };
+    if (v === "custom") return { from: $("expFrom").value || lo, to: $("expTo").value || hi };
+    return { from: addDays(hi, -(+v - 1)), to: hi };
+  }
+  function expTop(from, to) {
+    const m = new Map(), art = new Map(); let plays = 0, ms = 0;
+    exp.rows.forEach((r) => {
+      if (r.d < from || r.d > to) return;
+      plays += r.c; ms += r.ms;
+      const k = keyOf(r.t, r.a); const x = m.get(k) || { t: r.t, a: r.a, c: 0, ms: 0 }; x.c += r.c; x.ms += r.ms; m.set(k, x);
+      if (r.a) { const ak = norm(firstArtist(r.a)); const y = art.get(ak) || { n: firstArtist(r.a), c: 0 }; y.c += r.c; art.set(ak, y); }
+    });
+    const top = [...m.values()].sort((x, y) => y.c - x.c || y.ms - x.ms);
+    return { top, plays, ms, songs: m.size, artists: [...art.values()].sort((x, y) => y.c - x.c) };
+  }
+  function expUi() {
+    $("expRange").hidden = !exp;
+    if (!exp) return;
+    $("expHelp").open = false;
+    const { lo, hi } = expBounds();
+    $("expFrom").min = $("expTo").min = lo; $("expFrom").max = $("expTo").max = hi;
+    if (!$("expFrom").value) $("expFrom").value = addDays(hi, -27);
+    if (!$("expTo").value) $("expTo").value = hi;
+    const age = Math.floor((Date.now() - Date.parse(hi + "T23:59:59")) / 864e5);
+    const total = exp.rows.reduce((s, r) => s + r.c, 0);
+    $("expInfo").textContent = `${exp.src.includes("spotify") && !exp.src.includes("apple") ? "Spotify-Verlauf" : "Apple-Music-Export"}: ${total.toLocaleString("de-CH")} Wiedergaben vom ${fmtIso(lo)} bis ${fmtIso(hi)}.` +
+      (age > 10 ? ` Der Export endet vor ${age} Tagen. „Letzte 7 Tage“ meint deshalb die letzten 7 Tage im Export, nicht diese Woche. Für einen aktuellen Mix brauchst du einen neuen Export.` : "");
+    $("expCustom").hidden = $("expPreset").value !== "custom";
+    const { from, to } = expRangeSel();
+    const r = expTop(from, to);
+    $("expPreview").textContent = r.plays
+      ? `${fmtIso(from)} bis ${fmtIso(to)}: ${r.plays.toLocaleString("de-CH")} Wiedergaben, ${r.ms ? Math.round(r.ms / 36e5).toLocaleString("de-CH") + " Stunden, " : ""}${r.songs.toLocaleString("de-CH")} verschiedene Songs. Meistgehört: ${r.artists.slice(0, 3).map((a) => a.n).join(", ")}.`
+      : "In diesem Zeitraum gibt es keine Wiedergaben.";
+    $("expUse").disabled = !r.plays;
+  }
+  ["expPreset", "expFrom", "expTo"].forEach((id) => $(id).addEventListener("input", expUi));
+  $("expUse").addEventListener("click", () => {
+    const { from, to } = expRangeSel(); const r = expTop(from, to);
+    const top = r.top.slice(0, 50);
+    addSeedLines(top.map((x) => x.a ? `${x.t} – ${x.a}` : x.t), true);
+    $("expStatus").textContent = `${top.length} Songs übernommen (${fmtIso(from)} bis ${fmtIso(to)}, meistgespielt zuerst).`;
+  });
+  $("expClear").addEventListener("click", () => { exp = null; store.del("exp"); expUi(); $("expHelp").open = true; $("expStatus").textContent = "Export entfernt."; });
+  loadExp(); expUi();
 
   /* ---------- Spotify (PKCE) ---------- */
   const SP = { auth: "https://accounts.spotify.com/authorize", token: "https://accounts.spotify.com/api/token", api: "https://api.spotify.com/v1" };
@@ -902,9 +1131,9 @@ a { color: var(--accent); }
 
   /* ---------- MusicBrainz (Genres) ---------- */
   const mbQueue = limiter(1, 1100);
-  let mbCache = store.get("mbCache", {});
+  let mbCache = store.get("mbCache2", {});
   let mbSaveT = null;
-  const saveMb = () => { clearTimeout(mbSaveT); mbSaveT = setTimeout(() => { const keys = Object.keys(mbCache); if (keys.length > 1500) keys.slice(0, keys.length - 1500).forEach((k) => delete mbCache[k]); store.set("mbCache", mbCache); }, 800); };
+  const saveMb = () => { clearTimeout(mbSaveT); mbSaveT = setTimeout(() => { const keys = Object.keys(mbCache); if (keys.length > 1500) keys.slice(0, keys.length - 1500).forEach((k) => delete mbCache[k]); store.set("mbCache2", mbCache); }, 800); };
   let mbDown = false;
   const mbUrl = (q, limit) => `https://musicbrainz.org/ws/2/artist/?query=${encodeURIComponent(q)}&fmt=json&limit=${limit}`;
   const mbTags = (a) => (a?.tags || []).map((t) => ({ n: String(t.name).toLowerCase(), c: +t.count || 1 }));
@@ -951,7 +1180,8 @@ a { color: var(--accent); }
     const v = prefs.mood[m.k]; const d = prof?.mood?.[m.k] ?? 50;
     return `${m.label}: ${v > d ? "mehr Richtung „" + m.right + "“" : "mehr Richtung „" + m.left + "“"} (Zielwert ${Math.round(v)} von 100)`;
   });
-  const famWords = (prefs) => Object.entries(prefs.fam).filter(([, v]) => v).map(([f, v]) => `${FAM[f].label}: ${({ "-2": "ausschliessen", "-1": "weniger", "1": "mehr", "2": "viel mehr" })[v]}`);
+  const famWords = (prefs) => [...Object.entries(prefs.fam).filter(([, v]) => v).map(([f, v]) => [FAM[f].label, v]), ...Object.entries(prefs.tags || {}).filter(([, v]) => v)]
+    .map(([l, v]) => `${l}: ${({ "-2": "ausschliessen", "-1": "weniger", "1": "mehr", "2": "viel mehr" })[v]}`);
   const KLANG_SCHEMA = '"klang":{"energie":0.0-1.0,"tempo":BPM,"akustisch":0.0-1.0,"instrumental":0.0-1.0,"stimmung":0.0-1.0,"tanzbar":0.0-1.0}';
   const klangToFeat = (k) => k && typeof k === "object" ? { energy: +k.energie, tempo: +k.tempo, acoustic: +k.akustisch, instrumental: +k.instrumental, valence: +k.stimmung, dance: +k.tanzbar } : null;
   function claudeTrack(t, i, n, seeds, known) {
@@ -1008,16 +1238,16 @@ Antworte nur mit JSON in genau dieser Form:
       profile: { text: p.beschreibung || "", logAvg: sw ? sl / sw : 6, artists, chartLog: +p.chartHoerer > 0 ? Math.log10(+p.chartHoerer) : null, estimated: true, mood, moodN: mood ? 1 : 0 }
     };
   }
-  async function claudeMore(famId) {
+  async function claudeMore(label) {
     const seeds = state.seeds.slice(0, 40).map((s) => `${s.title}${s.artist ? " – " + s.artist : ""}`).join("\n");
     const have = state.pool.map((c) => `${c.title} – ${c.artist}`).slice(0, 80).join("\n");
     const prompt =
-`Hörliste einer Person:\n${seeds}\n\nDiese Songs sind schon vorgeschlagen:\n${have}\n\nSchlage 12 weitere reale Songs aus dem Bereich „${FAM[famId].label}“ vor, die zum Geschmack dieser Hörliste passen und nicht oben stehen. Bekanntheit: ${popWord(state.opts.pop)} als die Künstler der Hörliste.
+`Hörliste einer Person:\n${seeds}\n\nDiese Songs sind schon vorgeschlagen:\n${have}\n\nSchlage 12 weitere reale Songs aus dem Bereich „${label}“ vor, die zum Geschmack dieser Hörliste passen und nicht oben stehen. Nur Songs, die wirklich zu diesem Genre gehören; lieber weniger als falsche. Bekanntheit: ${popWord(state.opts.pop)} als die Künstler der Hörliste.
 Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song aus der Hörliste","similarity":0.6,"hoerer":Zahl,"genres":["…"],${KLANG_SCHEMA},"reason":"höchstens 10 Wörter auf Deutsch"}]}`;
     const res = await sample.json(prompt, { cache: false });
     const known = new Set(state.seeds.map((s) => norm(firstArtist(s.artist))));
     const list = Array.isArray(res?.tracks) ? res.tracks.filter((t) => t && t.title && t.artist) : [];
-    return list.map((t, i) => Object.assign(claudeTrack(t, i, list.length, state.seeds, known), { order: 1, from: [`Richtung ${FAM[famId].label}`] }));
+    return list.map((t, i) => Object.assign(claudeTrack(t, i, list.length, state.seeds, known), { order: 1, from: [`Richtung ${label}`] }));
   }
 
   /* ---------- Zustand & Bewertung ---------- */
@@ -1040,15 +1270,22 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
     let total = WEIGHTS.sim * c.simN + WEIGHTS.fit * fit + WEIGHTS.nov * novelty + WEIGHTS.hit * hit;
     const fams = famsOf(c); let excluded = false;
     const prefFam = Object.entries(state.prefs.fam).filter(([, v]) => v);
+    const prefTag = Object.entries(state.prefs.tags || {}).filter(([, v]) => v);
+    let gsum = null;
     if (prefFam.length) {
       if (fams && Object.keys(fams).length) {
         let g = 0, ex = 0;
         prefFam.forEach(([f, v]) => { const w = fams[f] || 0; if (v === -2) ex += w; else g += v * w; });
         excluded = ex >= 0.34;
-        parts.genre = clamp(g / 2, -1, 1);
-        total += 0.14 * g;
-      } else parts.genre = 0;
+        gsum = g; total += 0.14 * g;
+      } else gsum = 0;
     }
+    if (prefTag.length) {
+      const tg = tagsOf(c); let g2 = 0;
+      prefTag.forEach(([q, v]) => { if (tagHit(tg, q)) { if (v === -2) excluded = true; else g2 += v; } });
+      gsum = (gsum || 0) + g2; total += 0.16 * g2;
+    }
+    if (gsum != null) parts.genre = clamp(gsum / 2, -1, 1);
     let mt = 0, mw = 0;
     MOODS.forEach((m) => {
       const s = moodStrength(m.k); if (!s) return;
@@ -1080,7 +1317,7 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
       perArtist.set(ak, (perArtist.get(ak) || 0) + 1);
       picked.push(c);
     }
-    if (state.keepOrder && !Object.values(state.prefs.fam).some(Boolean) && !Object.values(state.prefs.mood).some((v) => v != null)) picked.sort((a, b) => a.order - b.order);
+    if (state.keepOrder && !Object.values(state.prefs.fam).some(Boolean) && !Object.values(state.prefs.tags || {}).some(Boolean) && !Object.values(state.prefs.mood).some((v) => v != null)) picked.sort((a, b) => a.order - b.order);
     else for (let i = 1; i < picked.length; i++) {
       if (norm(picked[i].artist) === norm(picked[i - 1].artist)) {
         const j = picked.findIndex((x, idx) => idx > i && norm(x.artist) !== norm(picked[i - 1].artist));
@@ -1221,7 +1458,8 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
           </div>
           <div class="t-side"><span title="Ähnlichkeit zu deinen Songs">${Math.round(t.simN * 100)} %</span><span class="meter" aria-hidden="true"><i style="width:${Math.round(t.simN * 100)}%"></i></span>
             ${state.example ? "" : `<button class="linkbtn" data-why="${esc(t.key)}" aria-expanded="${open}">${open ? "Weniger" : "Warum?"}</button>`}
-            <a href="${t.spUrl || "https://open.spotify.com/search/" + encodeURIComponent(`${t.title} ${firstArtist(t.artist)}`)}" target="_blank" rel="noopener">${t.spUrl ? "Öffnen" : "Auf Spotify suchen"}</a></div>
+            <a href="${t.spUrl || "https://open.spotify.com/search/" + encodeURIComponent(`${t.title} ${firstArtist(t.artist)}`)}" target="_blank" rel="noopener">Spotify</a>
+            <a href="https://music.apple.com/search?term=${encodeURIComponent(`${t.title} ${firstArtist(t.artist)}`)}" target="_blank" rel="noopener">Apple Music</a></div>
         </div>
         ${open ? `<div class="detail">
           <div class="parts">
@@ -1262,13 +1500,24 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
         <p class="sub">Genres – Balken: Anteil im Mix · Strich: Anteil in deinen Hördaten</p>
         <div class="fam-grid" id="famGrid"></div>
         <div class="addfam"><label for="addFam" class="hint">Andere Richtung einschlagen:</label><select id="addFam"></select><button class="btn small" id="addFamBtn">Mehr davon</button></div>
+        <p class="sub">Genaue Genres – suchen, dazunehmen oder ausschliessen</p>
+        <div class="addfam">
+          <input type="text" id="gSearch" list="genreList" placeholder="Genre suchen, z. B. breakcore" autocomplete="off" spellcheck="false" aria-label="Genre suchen">
+          <button class="btn small" id="gMore">Mehr davon</button><button class="btn small" id="gNo">Nicht im Mix</button>
+        </div>
+        <datalist id="genreList"></datalist>
+        <div class="gchips" id="gChips"></div>
         <p class="sub">Klang – Strich: dein Durchschnitt</p>
         <div id="moodNote"></div>
         <div class="moods" id="moods"></div>
         <div class="row"><button class="btn" id="resetTune">Feinschliff zurücksetzen</button><button class="btn" id="reshuffle">Neu mischen</button></div>
       </div>`;
     renderGenreGrid(); renderMoods(); renderTuneStatus();
-    $("resetTune").addEventListener("click", () => { state.prefs = { fam: {}, mood: {} }; refresh(); });
+    $("resetTune").addEventListener("click", () => { state.prefs = { fam: {}, mood: {}, tags: {} }; refresh(); });
+    const addTag = (v) => { const q = $("gSearch").value.trim().toLowerCase(); if (!q) return; state.prefs.tags = state.prefs.tags || {}; state.prefs.tags[q] = v; $("gSearch").value = ""; refresh({ tune: false }); renderGenreGrid(); if (v > 0 && tagCount(q) < 12) moreOf("tag:" + q); };
+    $("gMore").addEventListener("click", () => addTag(1));
+    $("gNo").addEventListener("click", () => addTag(-2));
+    $("gSearch").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addTag(1); } });
     $("reshuffle").addEventListener("click", () => { state.pool.forEach((c) => (c.jit = 0.88 + Math.random() * 0.24)); refresh({ tune: false }); });
     $("addFamBtn").addEventListener("click", () => { const f = $("addFam").value; if (!f) return; state.prefs.fam[f] = 1; refresh(); moreOf(f); });
   }
@@ -1293,6 +1542,7 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
         ${canMore ? `<button class="btn small" data-more="${id}">Mehr ${esc(FAM[id].label)} suchen</button>` : ""}
       </div>`;
     }).join("");
+    renderTagChips();
     const sel = $("addFam");
     if (sel) {
       const rest = FAMS.filter((f) => !ids.includes(f.id));
@@ -1304,6 +1554,38 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
     if (b) { const id = b.dataset.fam, v = +b.dataset.v; state.prefs.fam[id] = v; refresh({ tune: false }); renderGenreGrid(); return; }
     const m = e.target.closest("[data-more]");
     if (m) moreOf(m.dataset.more);
+  });
+  const GENRES = ("breakcore,hyperpop,digicore,glitchcore,nightcore,vaporwave,synthwave,darkwave,coldwave,minimal wave,witch house,chillwave,lo-fi,lo-fi hip hop,bedroom pop,dream pop,shoegaze,blackgaze,slowcore,sadcore,midwest emo,emo,screamo,emo rap,math rock,post-rock,post-metal,noise rock,noise pop,art rock,krautrock,space rock,psychedelic rock,stoner rock,garage rock,surf rock,britpop,indie rock,indie pop,indie folk,chamber pop,art pop,baroque pop,sophisti-pop,city pop,j-pop,k-pop,c-pop,eurobeat,eurodance,schlager,neue deutsche welle,deutschrap,chanson,singer-songwriter,folk,freak folk,anti-folk,americana,bluegrass,country,alt-country,blues,soul,neo-soul,funk,r&b,alternative r&b,gospel,jazz,bebop,free jazz,jazz fusion,nu jazz,acid jazz,bossa nova,samba,mpb,reggae,dub,dancehall,ska,ska punk,reggaeton,cumbia,salsa,bachata,afrobeat,afrobeats,amapiano,gqom,highlife,baile funk,flamenco,fado,klezmer,balkan brass,celtic,pop punk,skate punk,punk rock,hardcore punk,crust punk,d-beat,post-punk,post-hardcore,metalcore,deathcore,mathcore,djent,nu metal,sludge metal,doom metal,black metal,death metal,thrash metal,power metal,symphonic metal,folk metal,grindcore,powerviolence,industrial,industrial metal,ebm,aggrotech,noise,harsh noise,drone,dark ambient,ambient,new age,idm,glitch,footwork,juke,jersey club,uk garage,2-step,speed garage,bassline,grime,uk drill,drill,trap,phonk,drift phonk,memphis rap,cloud rap,boom bap,jazz rap,conscious hip hop,horrorcore,hardstyle,rawstyle,gabber,frenchcore,happy hardcore,uk hardcore,jungle,drum and bass,liquid funk,neurofunk,jump up,dubstep,riddim,brostep,future bass,future garage,trance,psytrance,goa trance,progressive house,deep house,tech house,minimal techno,acid techno,hard techno,industrial techno,detroit techno,acid house,chicago house,french house,disco,nu-disco,italo disco,synthpop,electropop,electroclash,new wave,trip hop,downtempo,chiptune,bitpop,classical,baroque,contemporary classical,minimalism,neoclassical,soundtrack,video game music").split(",");
+  const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  function tagHit(tags, q) {
+    if (!tags || !tags.length) return false;
+    const re = new RegExp("(^|[^a-z0-9])" + reEsc(q) + "([^a-z0-9]|$)", "i");
+    return tags.some((t) => t === q || re.test(t));
+  }
+  const tagCount = (q) => state.pool.filter((c) => tagHit(tagsOf(c), q)).length;
+  function renderTagChips() {
+    const box = $("gChips"), dl = $("genreList"); if (!box) return;
+    const seen = new Map();
+    [...state.pool, ...state.picked].forEach((c) => tagsOf(c).forEach((t) => seen.set(t, (seen.get(t) || 0) + 1)));
+    const dyn = [...seen.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t);
+    const all = [...new Set([...dyn, ...GENRES])];
+    if (dl && dl.childElementCount !== all.length) dl.innerHTML = all.map((g) => `<option value="${esc(g)}">${seen.has(g) ? seen.get(g) + " Songs im Pool" : ""}</option>`).join("");
+    const tags = Object.entries(state.prefs.tags || {});
+    box.innerHTML = tags.length ? tags.map(([q, v]) => {
+      const inMix = state.picked.filter((c) => tagHit(tagsOf(c), q)).length, inPool = tagCount(q);
+      return `<div class="gchip" data-pref="${v}">
+        <b>${esc(q)}</b><span>${v === -2 ? `${state.selStats?.excl ? "ausgeschlossen" : "kommt nicht vor"}` : `${inMix} im Mix · ${inPool} gefunden`}</span>
+        <span class="seg mini">${[[-2, "Nie"], [1, "Mehr"], [2, "Viel mehr"]].map(([x, l]) => `<button data-gset="${esc(q)}" data-v="${x}" aria-pressed="${v === x}">${l}</button>`).join("")}</span>
+        ${v > 0 && inPool < 12 ? `<button class="linkbtn" data-more="tag:${esc(q)}">Mehr suchen</button>` : ""}
+        <button class="gx" data-gdel="${esc(q)}" aria-label="${esc(q)} entfernen">✕</button>
+      </div>`;
+    }).join("") : `<p class="hint">Noch keine eigenen Genres. Tipp ein Genre ins Suchfeld, die Liste schlägt passende vor.</p>`;
+  }
+  R.addEventListener("click", (e) => {
+    const s = e.target.closest("[data-gset]");
+    if (s) { state.prefs.tags[s.dataset.gset] = +s.dataset.v; refresh({ tune: false }); renderGenreGrid(); if (+s.dataset.v > 0 && tagCount(s.dataset.gset) < 12) moreOf("tag:" + s.dataset.gset); return; }
+    const d = e.target.closest("[data-gdel]");
+    if (d) { delete state.prefs.tags[d.dataset.gdel]; refresh({ tune: false }); renderGenreGrid(); }
   });
   function renderMoods() {
     const box = $("moods"), note = $("moodNote"); if (!box) return;
@@ -1355,26 +1637,28 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
     el.textContent = parts.join(" · ");
   }
   let moreBusy = false;
-  async function moreOf(famId) {
+  async function moreOf(key) {
     if (moreBusy) return; moreBusy = true;
-    tuneMsg = `Suche mehr ${FAM[famId].label} …`; renderTuneStatus();
+    const isTag = key.startsWith("tag:"), q = isTag ? key.slice(4) : null;
+    const label = isTag ? q : FAM[key].label, mbTag = isTag ? q : FAM[key].tag;
+    tuneMsg = `Suche mehr ${label} …`; renderTuneStatus();
     try {
       let added = [];
-      if (state.engine === "claude") added = await claudeMore(famId);
-      else added = await deezerMore(famId);
+      if (state.engine === "claude") added = await claudeMore(label);
+      else added = await deezerMore(mbTag, label);
+      if (isTag) added.forEach((c) => { const t = tagsOf(c); if (!tagHit(t, q)) c.tags = [q, ...t]; });
       const have = new Set(state.pool.map((c) => c.key));
       added = added.filter((c) => !have.has(c.key) && !state.seeds.some((s) => keyOf(s.title, s.artist) === c.key));
       state.pool.push(...added);
       state.stats.extra = (state.stats.extra || 0) + added.length;
-      tuneMsg = added.length ? `${added.length} Songs aus ${FAM[famId].label} dazugeholt` : `Keine weiteren Songs aus ${FAM[famId].label} gefunden`;
+      tuneMsg = added.length ? `${added.length} Songs aus ${label} dazugeholt` : `Keine weiteren Songs aus ${label} gefunden`;
       refresh();
     } catch (e) {
       tuneMsg = e.code ? sampleErr(e) : (e.message || "Suche fehlgeschlagen");
     } finally { moreBusy = false; renderTuneStatus(); setTimeout(() => { tuneMsg = ""; renderTuneStatus(); }, 10000); }
   }
-  async function deezerMore(famId) {
-    const fam = FAM[famId];
-    const j = await mbQueue(() => fetchJson(mbUrl(`tag:"${fam.tag}"`, 40))).catch((e) => { if (e.network) mbDown = true; throw new Error("MusicBrainz ist nicht erreichbar."); });
+  async function deezerMore(mbTag, label) {
+    const j = await mbQueue(() => fetchJson(mbUrl(`tag:"${mbTag.replace(/"/g, "")}"`, 40))).catch((e) => { if (e.network) mbDown = true; throw new Error("MusicBrainz ist nicht erreichbar."); });
     const known = new Set(state.profile.artists.map((a) => a.key));
     const inPool = new Set(state.pool.map((c) => norm(firstArtist(c.artist))));
     const arts = (j?.artists || []).filter((a) => a.name && !known.has(norm(a.name)) && !inPool.has(norm(a.name))).slice(0, 24);
@@ -1389,7 +1673,7 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
       (t?.data || []).forEach((x, i) => {
         if (!x.title || !x.artist) return;
         const title = x.title_short || x.title;
-        out.push({ title, artist: x.artist.name, artistId: x.artist.id, rank: +x.rank || 0, key: keyOf(title, x.artist.name), simN: 0.58 - i * 0.05, listeners: d.fans, known: false, from: [`Richtung ${fam.label}`] });
+        out.push({ title, artist: x.artist.name, artistId: x.artist.id, rank: +x.rank || 0, key: keyOf(title, x.artist.name), simN: 0.58 - i * 0.05, listeners: d.fans, known: false, from: [`Richtung ${label}`] });
       });
     }));
     return out;
@@ -1459,7 +1743,7 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
     const card = $("calcCard"); if (!card) return;
     card.hidden = false;
     const s = state.stats || {}, sel = state.selStats || {};
-    const genreOn = Object.values(state.prefs.fam).some(Boolean);
+    const genreOn = Object.values(state.prefs.fam).some(Boolean) || Object.values(state.prefs.tags || {}).some(Boolean);
     const moodW = MOODS.reduce((t, m) => t + moodStrength(m.k), 0);
     const comps = [
       { c: "c1", l: "Ähnlichkeit", w: WEIGHTS.sim, d: state.engine === "claude" ? "Claudes Einschätzung, wie stark der Song einem bestimmten Song aus deiner Liste ähnelt." : "Wie oft und wie weit oben der Song in den Deezer-Mixen deiner Künstler und bei ähnlichen Künstlern auftaucht. Künstler, die du öfter hörst, zählen stärker." },
@@ -1467,7 +1751,7 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
       { c: "c3", l: "Neu / vertraut", w: WEIGHTS.nov, d: `Belohnt neue Künstler mit ${state.opts.disc} % und vertraute mit ${100 - state.opts.disc} % (Regler „Entdecken“).` },
       { c: "c4", l: state.engine === "claude" ? "Claudes Rangfolge" : "Beliebtheit des Songs", w: WEIGHTS.hit, d: state.engine === "claude" ? "Früher genannte Vorschläge zählen etwas mehr." : "Der Deezer-Rang des Songs. Bevorzugt bekannte Songs eines Künstlers leicht vor B-Seiten." }
     ];
-    if (genreOn) comps.push({ c: "c5", l: "Genre-Wunsch", w: 0.14, d: "Pro Stufe „Mehr“ gibt es einen Bonus, pro Stufe „Weniger“ einen Abzug, gewichtet nach dem Genre-Anteil des Künstlers. Bei „Raus“ fliegt ein Song raus, wenn mindestens ein Drittel seiner Genre-Tags in dieses Genre fällt." });
+    if (genreOn) comps.push({ c: "c5", l: "Genre-Wunsch", w: 0.14, d: "Pro Stufe „Mehr“ gibt es einen Bonus, pro Stufe „Weniger“ einen Abzug, gewichtet nach dem Genre-Anteil des Künstlers. Bei „Raus“ fliegt ein Song raus, wenn mindestens ein Drittel seiner Genre-Tags in dieses Genre fällt. Gesuchte Genres wie „breakcore“ geben einen Bonus, sobald der Künstler diesen Tag trägt; „Nicht im Mix“ entfernt solche Songs ganz." });
     if (moodW) comps.push({ c: "c6", l: "Klang-Wunsch", w: moodW, d: "Je näher Tempo, Energie usw. eines Songs am eingestellten Wert liegen, desto mehr Bonus. Je weiter du einen Regler von deinem Durchschnitt wegschiebst, desto stärker zählt er." });
     const tot = comps.reduce((t, c) => t + c.w, 0);
     const flow = state.engine === "deezer" ? [
@@ -1506,21 +1790,27 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
       lab.innerHTML = `<input type="checkbox" id="overwrite"${store.get("playlistId", null) ? " checked" : ""}> Bisherige Wochenmix-Playlist ersetzen`;
       box.append(lab);
     }
-    mk("Liste kopieren", "", copyList);
+    mk("Liste kopieren", "", () => copyList("plain"));
+    mk("Für Apple Music kopieren", "", () => copyList("apple"));
     const s = document.createElement("span"); s.className = "status"; s.id = "actStatus";
     if (!STANDALONE) s.textContent = "Zum Speichern in Spotify die selbst gehostete Version nutzen.";
     else if (!spToken) s.textContent = "Mit Spotify verbinden, um die Playlist direkt anzulegen.";
     box.append(s);
   }
-  async function copyList() {
-    const txt = `Wochenmix ${WEEK_LABEL} (${RANGE})\n` + state.picked.map((t, i) => `${i + 1}. ${t.title} – ${t.artist}`).join("\n");
+  const TMM = "https://www.tunemymusic.com/transfer/freetext-to-apple-music";
+  async function copyList(fmt) {
+    const txt = fmt === "apple"
+      ? state.picked.map((t) => `${firstArtist(t.artist)} - ${t.title}`).join("\n")
+      : `Wochenmix ${WEEK_LABEL} (${RANGE})\n` + state.picked.map((t, i) => `${i + 1}. ${t.title} – ${t.artist}`).join("\n");
     const st = $("actStatus");
-    try { await navigator.clipboard.writeText(txt); st.textContent = "Liste kopiert."; }
+    const appleHint = () => { st.innerHTML = `Liste kopiert. Öffne <a href="${TMM}" target="_blank" rel="noopener">TuneMyMusic</a>, füge sie bei „Freier Text“ ein, wähle Apple Music als Ziel und melde dich an. Der Dienst sucht jeden Song in Apple Music und legt daraus eine Playlist in deiner Mediathek an.`; };
+    try { await navigator.clipboard.writeText(txt); if (fmt === "apple") appleHint(); else st.textContent = "Liste kopiert."; }
     catch {
       let ta = $("copyBox");
       if (!ta) { ta = document.createElement("textarea"); ta.id = "copyBox"; ta.readOnly = true; ta.style.minHeight = "140px"; $("resActions").append(ta); }
       ta.value = txt; ta.focus(); ta.select();
-      st.textContent = "Text ist markiert – jetzt kopieren.";
+      if (fmt === "apple") { appleHint(); st.innerHTML = st.innerHTML.replace("Liste kopiert.", "Text ist markiert – jetzt kopieren."); }
+      else st.textContent = "Text ist markiert – jetzt kopieren.";
     }
   }
   async function saveToSpotify() {
@@ -1561,7 +1851,7 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
     const btn = $("build"); btn.disabled = true; clearLog();
     running?.abort(); running = new AbortController();
     gen++;
-    const keepPrefs = state && !state.example ? state.prefs : { fam: {}, mood: {} };
+    const keepPrefs = state && !state.example ? state.prefs : { fam: {}, mood: {}, tags: {} };
     try {
       let result;
       if (STANDALONE) { log(`Analyse von ${seeds.length} Songs über Deezer`); result = await engineDeezer(seeds, o); }
@@ -1599,7 +1889,7 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
 
   /* ---------- Startzustand ---------- */
   const EXAMPLE_MIX = {
-    example: true, engine: "example", opts: readOpts(), prefs: { fam: {}, mood: {} }, profile: { artists: [], logAvg: 6 }, stats: {},
+    example: true, engine: "example", opts: readOpts(), prefs: { fam: {}, mood: {}, tags: {} }, profile: { artists: [], logAvg: 6 }, stats: {},
     picked: [
       ["The Less I Know the Better", "Tame Impala", true, 0.86, "ähnlich wie „Feels Like We Only Go Backwards“", "psychedelic pop"],
       ["Breezeblocks", "alt-J", false, 0.71, "ähnlich wie „Do I Wanna Know?“", "indie rock"],
@@ -1612,7 +1902,7 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
   function restore() {
     const saved = store.get("lastState", null);
     if (saved && Array.isArray(saved.pool) && saved.pool.length && saved.profile) {
-      state = saved; state.example = false; state.opts = readOpts(); state.prefs = state.prefs || { fam: {}, mood: {} };
+      state = saved; state.example = false; state.opts = readOpts(); state.prefs = state.prefs || { fam: {}, mood: {} }; state.prefs.tags = state.prefs.tags || {};
       if (state.stats?.rb) enrich.mood.note = "";
       skeleton(); refresh();
     } else { state = EXAMPLE_MIX; skeleton(); refresh(); }
@@ -1655,3 +1945,5 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
   });
 })();
 </script>
+
+</html>
