@@ -243,7 +243,7 @@ a { color: var(--accent); }
   <header class="top">
     <div class="brand">
       <h1>Wochenmix</h1>
-      <p>Liest deine Top 50 aus Spotify oder einem Screenshot, sucht ähnliche Songs und Künstler und stellt daraus die Playlist dieser Woche zusammen. Danach kannst du Genres und Klang einstellen und sehen, wie nischig du hörst.</p>
+      <p>Liest deine meistgehörten Songs aus Spotify, einem Datenexport oder einem Screenshot, sucht ähnliche Songs und Künstler und stellt daraus die Playlist dieser Woche zusammen. Danach kannst du Genres und Klang einstellen und sehen, wie nischig du hörst.</p>
       <div class="mode" id="modeBadge"><i></i><span id="modeText">Modus wird erkannt …</span></div>
     </div>
     <div class="weekstamp"><b id="kw">KW</b><span id="range"></span></div>
@@ -273,12 +273,12 @@ a { color: var(--accent); }
             </div>
             <div class="panel" id="spLoaders" hidden>
               <div class="slider">
-                <div class="lab"><label for="span">Zeitraum für deine Top 50</label><output id="spanOut">7 Tage</output></div>
+                <div class="lab"><label for="span">Zeitraum für deine Top-Songs</label><output id="spanOut">7 Tage</output></div>
                 <input type="range" id="span" min="0" max="6" step="1" value="2">
                 <div class="ends"><span>1 Tag</span><span>1 Jahr</span></div>
               </div>
               <p class="hint" id="spanHint"></p>
-              <div class="row"><button class="btn primary" id="loadTop">Top 50 laden</button></div>
+              <div class="row"><button class="btn primary" id="loadTop">Top-Songs laden</button></div>
               <p class="note" id="histInfo"></p>
             </div>
             <span class="status" id="spStatus"></span>
@@ -330,12 +330,19 @@ a { color: var(--accent); }
               <label class="field" style="flex:1 1 140px">Bis <input type="date" id="expTo"></label>
             </div>
             <p class="hint" id="expPreview"></p>
-            <div class="row"><button class="btn primary" id="expUse">Top 50 übernehmen</button><button class="btn" id="expClear">Export entfernen</button></div>
+            <div class="row"><button class="btn primary" id="expUse">Top-Songs übernehmen</button><button class="btn" id="expClear">Export entfernen</button></div>
           </div>
         </div>
 
         <div class="panel" id="p-man" hidden>
           <p class="hint">Schreib deine Songs direkt in die Liste unten.</p>
+        </div>
+
+        <div class="slider" id="seedNBox">
+          <div class="lab"><label for="seedN">Wie viele Songs einlesen</label><output id="seedNOut">50 Songs</output></div>
+          <input type="range" id="seedN" min="25" max="200" step="25" value="50">
+          <div class="ends"><span>25 · fokussiert</span><span>200 · breit</span></div>
+          <p class="hint" id="seedNHint"></p>
         </div>
 
         <label class="field">Deine Songs <small>Ein Song pro Zeile: Titel – Künstler. Weiter oben zählt mehr.</small>
@@ -503,7 +510,7 @@ a { color: var(--accent); }
       const m = line.split(/\s+[–—-]\s+|\t|\s+•\s+/);
       if (m.length >= 2) { title = m[0].trim(); artist = m.slice(1).join(" ").trim(); }
       else { const by = line.match(/^(.*)\s+(?:by|von)\s+(.*)$/i); if (by) { title = by[1]; artist = by[2]; } }
-      const w = 1 - 0.6 * (i / Math.max(1, lines.length));
+      const w = 1 / Math.sqrt(1 + i / 10);
       const k = keyOf(title, artist);
       if (map.has(k)) map.get(k).w += w; else map.set(k, { title, artist, w, key: k, spId: seedIds[k] || null });
     });
@@ -810,7 +817,7 @@ a { color: var(--accent); }
   ["expPreset", "expFrom", "expTo"].forEach((id) => $(id).addEventListener("input", expUi));
   $("expUse").addEventListener("click", () => {
     const { from, to } = expRangeSel(); const r = expTop(from, to);
-    const top = r.top.slice(0, 50);
+    const top = r.top.slice(0, seedN());
     addSeedLines(top.map((x) => x.a ? `${x.t} – ${x.a}` : x.t), true);
     $("expStatus").textContent = `${top.length} Songs übernommen (${fmtIso(from)} bis ${fmtIso(to)}, meistgespielt zuerst).`;
   });
@@ -894,6 +901,37 @@ a { color: var(--accent); }
   $("spLogin").addEventListener("click", spLogin);
   $("spLogout").addEventListener("click", () => { spToken = null; store.del("spToken"); $("spStatus").textContent = "Abgemeldet."; spUi(); renderActions(); });
 
+  /* ---------- Anzahl Songs ---------- */
+  const seedNEl = $("seedN");
+  seedNEl.value = store.get("seedN", 50);
+  const seedN = () => +seedNEl.value;
+  function syncSeedN() {
+    const n = seedN();
+    $("seedNOut").textContent = `${n} Songs`;
+    $("seedNHint").textContent = n <= 50
+      ? "Fokussiert auf das, was du gerade am meisten hörst. Gut für einen Mix, der nah an deiner Woche bleibt."
+      : n <= 100
+        ? "Breiteres Profil: Songs, die du seltener hörst, fliessen auch ein, zählen aber schwächer. Die Analyse dauert etwas länger."
+        : "Sehr breit: gut für den Nischen-Index und dein Genre-Profil, der Mix wird aber allgemeiner. Spotifys Ranglisten (4 Wochen bis 1 Jahr) liefern höchstens etwa 100 Songs. Mehr gibt es aus deinem gesammelten Verlauf oder dem Datenexport.";
+    $("loadTop").textContent = `Top ${n} laden`;
+    $("expUse").textContent = `Top ${n} übernehmen`;
+    store.set("seedN", n);
+  }
+  seedNEl.addEventListener("input", () => { syncSeedN(); if (typeof expUi === "function") expUi(); });
+  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { $("seedNBox").hidden = !["p-sp", "p-exp"].includes(b.dataset.panel); }));
+  async function spTop(range, n) {
+    const out = [];
+    for (let off = 0; off < Math.min(n, 100); off += 50) {
+      const lim = Math.min(50, n - off);
+      let j;
+      try { j = await sp(`/me/top/tracks?time_range=${range}&limit=${lim}&offset=${off}`); }
+      catch (e) { if (off) break; throw e; }
+      const items = j?.items || []; out.push(...items);
+      if (items.length < lim) break;
+    }
+    const seen = new Set();
+    return out.filter((t) => t && t.id && !seen.has(t.id) && seen.add(t.id));
+  }
   /* ---------- Zeitraum & eigener Verlauf ---------- */
   const SPANS = [
     { days: 1, label: "1 Tag" }, { days: 3, label: "3 Tage" }, { days: 7, label: "7 Tage" }, { days: 14, label: "14 Tage" },
@@ -945,12 +983,13 @@ a { color: var(--accent); }
     const s = SPANS[+spanEl.value] || SPANS[2]; const stEl = $("spStatus"); const btn = $("loadTop");
     btn.disabled = true;
     try {
+      const n = seedN();
       if (s.range) {
-        stEl.textContent = `Lade Top 50 (${s.label}) …`;
-        const j = await sp(`/me/top/tracks?time_range=${s.range}&limit=50`);
-        const items = j?.items || [];
+        stEl.textContent = `Lade Top ${Math.min(n, 100)} (${s.label}) …`;
+        const items = await spTop(s.range, n);
         if (!items.length) throw new Error("Spotify hat für diesen Zeitraum noch keine Top-Songs.");
-        addSeedLines(items.map(trackLine), true, items.map((t) => t.id)); stEl.textContent = `${items.length} Top-Songs (${s.label}) geladen.`;
+        addSeedLines(items.map(trackLine), true, items.map((t) => t.id));
+        stEl.textContent = `${items.length} Top-Songs (${s.label}) geladen.` + (n > items.length ? ` Mehr gibt Spotify für diesen Zeitraum nicht heraus; für ${n} Songs nimm deinen Verlauf oder den Datenexport.` : "");
         return;
       }
       stEl.textContent = "Verlauf wird aktualisiert …";
@@ -962,14 +1001,14 @@ a { color: var(--accent); }
         const c = counts.get(k) || { n: p.n, a: p.a, id: p.id, c: 0, last: p.t };
         c.c++; total++; if (p.t > c.last) c.last = p.t; counts.set(k, c);
       });
-      const top = [...counts.values()].sort((x, y) => y.c - x.c || (y.last > x.last ? 1 : -1)).slice(0, 50);
+      const top = [...counts.values()].sort((x, y) => y.c - x.c || (y.last > x.last ? 1 : -1)).slice(0, n);
       const lines = top.map((x) => `${x.n} – ${x.a}`), ids = top.map((x) => x.id);
       let msg = `${top.length} Songs aus ${total} Wiedergaben der letzten ${s.label}`;
-      if (lines.length < 50) {
+      if (lines.length < n) {
         const covered = plays.length ? (Date.now() - Date.parse(plays[0].t)) / 864e5 : 0;
-        const j = await sp("/me/top/tracks?time_range=short_term&limit=50");
+        const fill = await spTop("short_term", Math.min(100, n));
         const seen = new Set(lines.map(norm));
-        const extra = (j?.items || []).filter((t) => !seen.has(norm(trackLine(t)))).slice(0, 50 - lines.length);
+        const extra = fill.filter((t) => !seen.has(norm(trackLine(t)))).slice(0, n - lines.length);
         lines.push(...extra.map(trackLine)); ids.push(...extra.map((t) => t.id));
         if (extra.length) msg += `, aufgefüllt mit ${extra.length} Top-Songs der letzten 4 Wochen`;
         if (covered < s.days - 0.5) msg += ` (dein Verlauf reicht erst ${covered < 1 ? "weniger als einen Tag" : Math.floor(covered) + (Math.floor(covered) === 1 ? " Tag" : " Tage")} zurück)`;
@@ -1031,7 +1070,8 @@ a { color: var(--accent); }
     const artW = new Map();
     withArtist.forEach((s) => { const a = firstArtist(s.artist); const k = norm(a); const cur = artW.get(k) || { name: a, w: 0, n: 0 }; cur.w += s.w; cur.n++; artW.set(k, cur); });
     const allArtists = [...artW.values()].sort((a, b) => b.w - a.w);
-    const seedArtists = allArtists.slice(0, 25);
+    const big = seeds.length > 100 ? 2 : seeds.length > 50 ? 1 : 0;
+    const seedArtists = allArtists.slice(0, clamp(Math.round(seeds.length / 2), 25, 50));
     stats.artists = allArtists.length;
     const maxAW = seedArtists[0].w;
     seedArtists.forEach((a) => (a.wn = a.w / maxAW));
@@ -1063,7 +1103,7 @@ a { color: var(--accent); }
       c.sim += sim; if (from && !c.from.includes(from)) c.from.push(from);
       cand.set(k, c);
     };
-    const radioFrom = found.slice(0, 10);
+    const radioFrom = found.slice(0, 10 + 2 * big);
     log(`Ähnliche Songs aus den Mixen von ${radioFrom.length} Künstlern sammeln`);
     await Promise.all(radioFrom.map(async (a) => {
       const j = await safeDz(`/artist/${a.dz.id}/radio?limit=40`);
@@ -1072,7 +1112,7 @@ a { color: var(--accent); }
     stats.radios = radioFrom.length;
     log("Ähnliche Künstler bestimmen");
     const rel = new Map();
-    await Promise.all(found.slice(0, 10).map(async (a) => {
+    await Promise.all(found.slice(0, 10 + 2 * big).map(async (a) => {
       const j = await safeDz(`/artist/${a.dz.id}/related?limit=20`);
       (j?.data || []).forEach((x, i) => {
         if (knownIds.has(x.id) || knownNames.has(norm(x.name))) return;
@@ -1084,18 +1124,18 @@ a { color: var(--accent); }
     const relList = [...rel.values()].sort((a, b) => b.s - a.s);
     stats.related = relList.length;
     const maxR = relList[0]?.s || 1;
-    log(`Top-Songs von ${Math.min(14, relList.length)} ähnlichen und ${Math.min(6, found.length)} deiner Künstler laden`);
+    log(`Top-Songs von ${Math.min(14, relList.length)} ähnlichen und ${Math.min(6 + big, found.length)} deiner Künstler laden`);
     await Promise.all([
       ...relList.slice(0, 14).map(async (r) => {
         const j = await safeDz(`/artist/${r.id}/top?limit=5`);
         (j?.data || []).forEach((t, i) => add(t, 0.7 * (r.s / maxR) * (1 - i * 0.1), `ähnlich wie ${r.via}`));
       }),
-      ...found.slice(0, 6).map(async (a) => {
+      ...found.slice(0, 6 + big).map(async (a) => {
         const j = await safeDz(`/artist/${a.dz.id}/top?limit=10`);
         (j?.data || []).forEach((t, i) => add(t, 0.45 * a.wn * (1 - i * 0.06), `mehr von ${a.dz.name}`));
       })
     ]);
-    stats.tops = Math.min(14, relList.length) + Math.min(6, found.length);
+    stats.tops = Math.min(14, relList.length) + Math.min(6 + big, found.length);
     stats.raw = raw; stats.unique = cand.size;
     if (!cand.size) throw new Error("Deezer hat keine ähnlichen Songs gefunden. Ergänze ein paar bekanntere Songs.");
 
@@ -1196,7 +1236,7 @@ a { color: var(--accent); }
   }
   async function engineClaude(seeds, o, signal, prefs) {
     if (!sample) throw new Error("Claude ist in dieser Ansicht nicht verfügbar.");
-    const list = seeds.slice(0, 80).map((s, i) => `${i + 1}. ${s.title}${s.artist ? " – " + s.artist : ""}`).join("\n");
+    const list = seeds.slice(0, 200).map((s, i) => `${i + 1}. ${s.title}${s.artist ? " – " + s.artist : ""}`).join("\n");
     const want = o.len + 10;
     const extra = prefs ? [...famWords(prefs), ...moodWords(prefs, state?.profile)] : [];
     const prompt =
@@ -1332,7 +1372,7 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
   let saveT = null;
   function persist() {
     clearTimeout(saveT);
-    saveT = setTimeout(() => { if (state && !state.example) store.set("lastState", { ...state, seeds: state.seeds.slice(0, 80) }); }, 400);
+    saveT = setTimeout(() => { if (state && !state.example) store.set("lastState", { ...state, seeds: state.seeds.slice(0, 200) }); }, 400);
   }
   function refresh(opts = {}) {
     if (!state) return;
@@ -1381,7 +1421,7 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
         enrich.mood.done++; if (enrich.mood.done % 8 === 0) renderTuneStatus();
       })));
       if (my !== gen) return;
-      const seedIdsList = state.seeds.map((s) => s.spId).filter(Boolean).slice(0, 50);
+      const seedIdsList = state.seeds.map((s) => s.spId).filter(Boolean).slice(0, 120);
       const candIds = cands.map((c) => c.spId).filter(Boolean);
       const feats = await rbFeatures([...new Set([...seedIdsList, ...candIds])]);
       if (my !== gen) return;
@@ -1755,7 +1795,7 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
     if (moodW) comps.push({ c: "c6", l: "Klang-Wunsch", w: moodW, d: "Je näher Tempo, Energie usw. eines Songs am eingestellten Wert liegen, desto mehr Bonus. Je weiter du einen Regler von deinem Durchschnitt wegschiebst, desto stärker zählt er." });
     const tot = comps.reduce((t, c) => t + c.w, 0);
     const flow = state.engine === "deezer" ? [
-      `<b>${s.seeds}</b> Songs aus deiner Liste eingelesen, darin <b>${s.artists}</b> Künstler. Weiter oben stehende Songs zählen bis zu 2,5-mal mehr.`,
+      `<b>${s.seeds}</b> Songs aus deiner Liste eingelesen, darin <b>${s.artists}</b> Künstler. Der oberste Song zählt ${Math.sqrt(1 + (s.seeds - 1) / 10).toLocaleString("de-CH", { maximumFractionDigits: 1 })}-mal so viel wie der unterste.`,
       `<b>${s.found}</b> der wichtigsten Künstler bei Deezer gefunden, mit ihren Fan-Zahlen als Mass für die Bekanntheit.`,
       `Kandidaten gesammelt: Mixe von <b>${s.radios}</b> Künstlern, <b>${s.related}</b> ähnliche Künstler, <b>${s.tops}</b> Top-Song-Listen. Ergibt <b>${s.raw}</b> Treffer und <b>${s.unique}</b> verschiedene Songs.${s.extra ? ` Dazu <b>${s.extra}</b> Songs über „Mehr davon suchen“.` : ""}`,
       `Die <b>${s.checked}</b> ähnlichsten genauer geprüft: Fan-Zahlen, ${enrich.genre.total ? `Genres für <b>${enrich.genre.done}</b> Künstler (MusicBrainz)` : "Genres (MusicBrainz)"}${s.rb ? `, Klang für <b>${s.rb}</b> Songs (ReccoBeats)` : ""}.`,
@@ -1923,6 +1963,8 @@ Antworte nur mit JSON: {"tracks":[{"title":"…","artist":"…","basedOn":"Song 
   const lastTab = store.get("tab", null);
   if (lastTab && $(lastTab)) $(lastTab).click();
   else if (IN_CLAUDE) $("tab-shot").click();
+  syncSeedN();
+  $("seedNBox").hidden = $("p-sp").hidden && $("p-exp").hidden;
   modeUi();
   if (IN_CLAUDE) {
     window.claude.use("sample").then(async (s) => {
